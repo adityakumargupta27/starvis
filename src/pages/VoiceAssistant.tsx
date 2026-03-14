@@ -1,84 +1,31 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, Send } from "lucide-react";
 
-const VoiceAssistant = () => {
-  const [isListening, setIsListening] = useState(false);
-  const [inputText, setInputText] = useState("");
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Mic } from "lucide-react";
+import SpaceBackground from "@/components/SpaceBackground";
 
-  const rings = [1, 2, 3, 4];
-
+export default function VoiceAssistant() {
   return (
-    <div className="dark min-h-screen bg-background flex flex-col items-center pt-12 pb-24 px-5">
-      <h1 className="font-display font-bold text-xl text-foreground mb-2">Voice Assistant</h1>
-      <p className="text-sm text-muted-foreground mb-12">Ask me anything about your studies</p>
-
-      {/* Waveform Visualization */}
-      <div className="relative flex items-center justify-center mb-16">
-        <AnimatePresence>
-          {isListening &&
-            rings.map((r) => (
-              <motion.div
-                key={r}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1 + r * 0.25, opacity: 0.15 - r * 0.03 }}
-                exit={{ scale: 0.8, opacity: 0 }}
-                transition={{
-                  repeat: Infinity,
-                  repeatType: "reverse",
-                  duration: 1.2 + r * 0.3,
-                  ease: "easeInOut",
-                }}
-                className="absolute h-28 w-28 rounded-full border-2 border-primary"
-              />
-            ))}
-        </AnimatePresence>
-
-        <motion.button
-          whileTap={{ scale: 0.92 }}
-          onClick={() => setIsListening(!isListening)}
-          className={`relative z-10 flex h-28 w-28 items-center justify-center rounded-full transition-colors ${
-            isListening
-              ? "bg-primary animate-pulse-glow"
-              : "bg-card border border-border"
-          }`}
-        >
-          {isListening ? (
-            <MicOff size={32} className="text-primary-foreground" />
-          ) : (
-            <Mic size={32} className="text-primary" />
-          )}
-        </motion.button>
-      </div>
-
-      <p className="text-xs text-muted-foreground mb-8">
-        {isListening ? "Listening… tap to stop" : "Tap to start speaking"}
-      </p>
-
-      {/* Chat bubbles area */}
-      <div className="w-full max-w-md flex-1 space-y-3 mb-6">
-        <div className="card-surface bg-card p-3 rounded-2xl rounded-tl-sm max-w-[80%]">
-          <p className="text-sm text-foreground">
-            Hello! I can help you study. Try asking me to explain a topic or quiz you.
-          </p>
-        </div>
-      </div>
-
-      {/* Text Input */}
-      <div className="w-full max-w-md flex items-center gap-2">
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder="Type a question..."
-          className="flex-1 rounded-xl bg-card border border-border px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-        />
-        <button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Send size={18} />
-        </button>
+    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden">
+      <SpaceBackground />
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="bg-black/20 backdrop-blur-sm border-purple-400/20 text-white">
+          <CardHeader className="text-center">
+            <CardTitle>Voice Assistant</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center justify-center space-y-6 pt-6">
+            <p className="text-gray-300">
+              Ask me anything about your schedule, assignments, or study progress.
+            </p>
+            <Button
+              size="icon"
+              className="w-28 h-28 rounded-full bg-purple-600/50 hover:bg-purple-600/70 text-white border-2 border-purple-400/50 shadow-lg shadow-purple-500/30 transition-all duration-300 hover:scale-105"
+            >
+              <Mic className="w-16 h-16" />
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
-};
-
-export default VoiceAssistant;
+}

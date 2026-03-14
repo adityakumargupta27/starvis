@@ -14,7 +14,7 @@ const BottomNav = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-nav">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-nav">
       <div className="mx-auto flex max-w-md items-center justify-around px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {navItems.map((item) => {
           const active = location.pathname === item.path;

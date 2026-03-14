@@ -1,105 +1,86 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { CheckCircle2, Circle, Calendar, AlertTriangle } from "lucide-react";
 
-interface Assignment {
-  id: number;
-  title: string;
-  subject: string;
-  due: string;
-  completed: boolean;
-  urgent: boolean;
-}
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import SpaceBackground from "@/components/SpaceBackground";
 
-const initialAssignments: Assignment[] = [
-  { id: 1, title: "Calculus Problem Set 4", subject: "Mathematics", due: "Mar 12", completed: false, urgent: true },
-  { id: 2, title: "Lab Report: Kinematics", subject: "Physics", due: "Mar 13", completed: false, urgent: false },
-  { id: 3, title: "Essay: Modern Poetry", subject: "English", due: "Mar 15", completed: false, urgent: false },
-  { id: 4, title: "Algorithm Analysis HW", subject: "Computer Science", due: "Mar 11", completed: true, urgent: false },
-  { id: 5, title: "Linear Algebra Quiz Prep", subject: "Mathematics", due: "Mar 14", completed: false, urgent: true },
-  { id: 6, title: "Database ER Diagram", subject: "Computer Science", due: "Mar 16", completed: true, urgent: false },
+const assignments = [
+  {
+    course: "Mathematics",
+    assignment: "Problem Set 1",
+    dueDate: "2024-10-26",
+    status: "Completed",
+  },
+  {
+    course: "History",
+    assignment: "Essay",
+    dueDate: "2024-11-15",
+    status: "In Progress",
+  },
+  {
+    course: "Web Development",
+    assignment: "Project Milestone 2",
+    dueDate: "2024-11-20",
+    status: "In Progress",
+  },
+  {
+    course: "Chemistry",
+    assignment: "Lab Report 3",
+    dueDate: "2024-11-22",
+    status: "Not Started",
+  },
+  {
+    course: "Physics",
+    assignment: "Chapter 5 Homework",
+    dueDate: "2024-11-25",
+    status: "Not Started",
+  },
 ];
 
-const Assignments = () => {
-  const [assignments, setAssignments] = useState(initialAssignments);
-
-  const toggle = (id: number) => {
-    setAssignments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, completed: !a.completed } : a))
-    );
-  };
-
-  const pending = assignments.filter((a) => !a.completed);
-  const done = assignments.filter((a) => a.completed);
-
+export default function Assignments() {
   return (
-    <div className="dark min-h-screen bg-background pb-24 pt-6 px-5">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-display font-bold text-foreground mb-1">Assignments</h1>
-        <p className="text-sm text-muted-foreground mb-6">
-          {pending.length} pending · {done.length} completed
-        </p>
-      </motion.div>
-
-      {/* Pending */}
-      <div className="space-y-2.5 mb-8">
-        {pending.map((a, i) => (
-          <motion.div
-            key={a.id}
-            initial={{ opacity: 0, x: -16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            onClick={() => toggle(a.id)}
-            className="card-surface bg-card flex items-start gap-3 p-4 cursor-pointer border border-primary/10 active:scale-[0.98] transition-transform"
-          >
-            <Circle size={20} className="mt-0.5 shrink-0 text-primary" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground truncate">{a.title}</span>
-                {a.urgent && <AlertTriangle size={13} className="shrink-0 text-destructive" />}
-              </div>
-              <p className="text-xs text-muted-foreground">{a.subject}</p>
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-              <Calendar size={12} />
-              {a.due}
-            </div>
-          </motion.div>
-        ))}
+    <div className="relative flex-1 p-4 md:p-8 pt-6">
+      <SpaceBackground />
+      <div className="relative z-10">
+        <Card className="bg-black/20 backdrop-blur-sm border-purple-400/20 text-white">
+          <CardHeader>
+            <CardTitle>Assignment Manager</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-purple-400/30">
+                  <TableHead className="text-white">Course</TableHead>
+                  <TableHead className="text-white">Assignment</TableHead>
+                  <TableHead className="text-white">Due Date</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assignments.map((item, index) => (
+                  <TableRow key={index} className="border-b border-purple-400/20">
+                    <TableCell>{item.course}</TableCell>
+                    <TableCell>{item.assignment}</TableCell>
+                    <TableCell>{item.dueDate}</TableCell>
+                    <TableCell>{item.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Completed */}
-      {done.length > 0 && (
-        <>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Completed
-          </p>
-          <div className="space-y-2">
-            {done.map((a) => (
-              <motion.div
-                key={a.id}
-                layout
-                onClick={() => toggle(a.id)}
-                className="card-surface bg-card/50 flex items-start gap-3 p-4 cursor-pointer opacity-60 active:scale-[0.98] transition-transform"
-              >
-                <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-primary" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground line-through truncate block">
-                    {a.title}
-                  </span>
-                  <p className="text-xs text-muted-foreground">{a.subject}</p>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                  <Calendar size={12} />
-                  {a.due}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
-};
-
-export default Assignments;
+}
