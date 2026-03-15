@@ -1,23 +1,25 @@
 
 import { NavLink } from "react-router-dom";
-import { Home, Mic, BarChart, BookOpen, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "./button";
 
 const navItems = [
-  { to: "/", icon: <Home />, label: "Dashboard" },
-  { to: "/voice", icon: <Mic />, label: "Voice Assistant" },
-  { to: "/analytics", icon: <BarChart />, label: "Analytics" },
-  { to: "/assignments", icon: <BookOpen />, label: "Assignments" },
+  { to: "/", label: "Dashboard" },
+  { to: "/analytics", label: "Analytics" },
+  { to: "/assignments", label: "Assignments" },
+  { to: "/todo", label: "To-Do List" },
+  { to: "/calendar", label: "Calendar" },
+  { to: "/settings", label: "Settings" },
 ];
 
 export function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 p-4 bg-background border-r">
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold">AI Assistant</h2>
+      <aside className="hidden md:flex flex-col w-64 p-4 bg-background/30 border-r">
+        <div className="mb-8 flex flex-col items-center">
+          
         </div>
         <nav className="flex flex-col space-y-2">
           {navItems.map((item) => (
@@ -25,13 +27,12 @@ export function Sidebar() {
               key={item.label}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center p-2 rounded-lg ${
-                  isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                `flex items-center p-3 rounded-lg transition-all duration-200 ${
+                  isActive ? "bg-purple-600/30 text-white" : "hover:bg-purple-600/20"
                 }`
               }
             >
-              {item.icon}
-              <span className="ml-4">{item.label}</span>
+              <span className="font-medium">{item.label}</span>
             </NavLink>
           ))}
         </nav>
@@ -45,9 +46,9 @@ export function Sidebar() {
               <Menu />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold">AI Assistant</h2>
+          <SheetContent side="left" className="bg-background/80 backdrop-blur-sm">
+            <div className="mb-8 flex flex-col items-center">
+               
             </div>
             <nav className="flex flex-col space-y-2">
               {navItems.map((item) => (
@@ -55,13 +56,12 @@ export function Sidebar() {
                   key={item.label}
                   to={item.to}
                   className={({ isActive }) =>
-                    `flex items-center p-2 rounded-lg ${
-                      isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent"
+                    `flex items-center p-3 rounded-lg transition-all duration-200 ${
+                      isActive ? "bg-purple-600/30 text-white" : "hover:bg-purple-600/20"
                     }`
                   }
                 >
-                  {item.icon}
-                  <span className="ml-4">{item.label}</span>
+                  <span className="font-medium">{item.label}</span>
                 </NavLink>
               ))}
             </nav>

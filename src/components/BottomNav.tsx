@@ -1,10 +1,9 @@
-import { Home, Mic, BarChart3, ClipboardList } from "lucide-react";
+import { Home, BarChart3, ClipboardList } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
-  { path: "/voice", icon: Mic, label: "Voice" },
   { path: "/analytics", icon: BarChart3, label: "Analytics" },
   { path: "/assignments", icon: ClipboardList, label: "Tasks" },
 ];

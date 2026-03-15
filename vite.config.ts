@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
     hmr: {
       overlay: false,
     },
+    proxy: {
+      '/chatbot': {
+        target: 'http://localhost:11434/api',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/chatbot/, ''),
+      },
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
