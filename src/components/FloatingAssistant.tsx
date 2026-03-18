@@ -4,21 +4,8 @@ import { Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SpaceBackground from "./SpaceBackground";
-import OpenAI from "openai";
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-let openai: OpenAI | null = null;
-
-if (apiKey) {
-  openai = new OpenAI({
-    apiKey,
-    dangerouslyAllowBrowser: true,
-  });
-} else {
-  console.error(
-    "OpenAI API key not found. Please add it to your .env file."
-  );
-}
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 interface Message {
   text: string;
@@ -42,34 +29,53 @@ const FloatingAssistant = () => {
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    if (input.trim() === "" || !openai) return;
+    if (input.trim() === "" || !GEMINI_API_KEY) return;
 
     const userMessage: Message = { text: input, sender: "user" };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput("");
     setIsLoading(true);
 
     try {
-      const completion = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user", content: input },
-        ],
-        model: "gpt-3.5-turbo",
-      });
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: currentInput }] }],
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const assistantMessageText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        "Sorry, I couldn't process that.";
 
       const assistantMessage: Message = {
-        text: completion.choices[0].message.content || "Sorry, I couldn't process that.",
+        text: assistantMessageText,
         sender: "assistant",
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
       console.error("Chatbot error:", error);
-      let errorDetails = '';
+      let errorDetails = "";
       if (typeof error === 'object' && error !== null) {
-          errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+        errorDetails = JSON.stringify(
+          error,
+          Object.getOwnPropertyNames(error),
+          2
+        );
       } else {
-          errorDetails = String(error);
+        errorDetails = String(error);
       }
       const errorMessage: Message = {
         text: `Sorry, an error occurred. Details: ${errorDetails}`,
@@ -141,7 +147,7 @@ const FloatingAssistant = () => {
                       Hello! How can I help you today?
                     </h4>
                     <p className="text-gray-300">
-                      Ask me anything. I'm connected to the ChatGPT API.
+                      Ask me anything. I'm connected to the Gemini API.
                     </p>
                   </motion.div>
                 ) : (
@@ -189,7 +195,7 @@ const FloatingAssistant = () => {
                   <Button
                     type="submit"
                     className="bg-purple-600 hover:bg-purple-700 text-white"
-                    disabled={isLoading || !openai}
+                    disabled={isLoading || !GEMINI_API_KEY}
                   >
                     <Send size={20} />
                   </Button>
