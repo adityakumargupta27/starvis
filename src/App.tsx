@@ -23,10 +23,30 @@ const App = () => (
       <Sonner />
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <BrowserRouter>
-          <div className="relative flex min-h-screen text-foreground">
+          {/*
+           * Root layout:
+           * - On mobile: full-screen, no sidebar, bottom nav shows
+           * - On desktop (md+): sidebar on left, no bottom nav
+           * - pt-safe / pb-safe handle iPhone notch + home indicator via CSS env()
+           */}
+          <div className="relative flex w-full h-full overflow-hidden text-foreground">
             <SpaceBackground />
-            <Sidebar />
-            <main className="flex-1">
+
+            {/* Sidebar: hidden on mobile (<md), visible on desktop */}
+            <div className="hidden md:block flex-shrink-0">
+              <Sidebar />
+            </div>
+
+            {/* Main scrollable area */}
+            <main
+              className="flex-1 overflow-y-auto"
+              style={{
+                /* Top padding: status bar on iOS (safe area) */
+                paddingTop: "env(safe-area-inset-top, 0px)",
+                /* Bottom padding: home indicator + bottom nav height on mobile */
+                paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4rem)",
+              }}
+            >
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/analytics" element={<StudyAnalytics />} />
@@ -35,8 +55,14 @@ const App = () => (
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
-            <BottomNav />
+
+            {/* Bottom nav: only shown on mobile (<md) */}
+            <div className="md:hidden">
+              <BottomNav />
+            </div>
           </div>
+
+          {/* Floating AI assistant (sits above everything) */}
           <FloatingAssistant />
         </BrowserRouter>
       </ThemeProvider>
