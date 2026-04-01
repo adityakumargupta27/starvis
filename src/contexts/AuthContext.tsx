@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 export interface User {
   name: string;
   email: string;
-  avatar?: string; // Google profile picture URL
+  avatar?: string; 
   initials: string;
 }
 

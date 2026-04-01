@@ -4,15 +4,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import SpaceBackground from "@/components/SpaceBackground";
 import { Sparkles, AlertCircle, X, ArrowRight, GraduationCap } from "lucide-react";
 
-const BMSCE_DOMAIN = "bmsce.in";
-
-// Simulated Google accounts for the picker (demo mode)
-// In production, replace with real Firebase Google OAuth
 const DEMO_ACCOUNTS = [
   {
-    name: "Aditya Kumar Gupta",
-    email: "1by22cs027@bmsce.in",
+    name: "Aditya Kumar gupta ",
+    email: "adityakumargupta@gmail.com",
     avatar: "https://ui-avatars.com/api/?name=Aditya+Kumar&background=7c3aed&color=fff&size=96",
+  },
+  {
+    name: "Priya Sharma",
+    email: "priya.sharma@outlook.com",
+    avatar: "https://ui-avatars.com/api/?name=Priya+Sharma&background=0f766e&color=fff&size=96",
   },
 ];
 
@@ -102,14 +103,14 @@ function GoogleAccountPicker({ onSelect, onClose, onCustomEmail }: GooglePickerP
             </div>
             <div>
               <p className="text-sm text-white">Use another account</p>
-              <p className="text-xs text-gray-500">Must be a @bmsce.in address</p>
+              <p className="text-xs text-gray-500">Sign in with any valid email</p>
             </div>
           </button>
         </div>
 
         <div className="px-5 pb-4">
           <p className="text-[10px] text-gray-600 text-center">
-            Only <span className="text-gray-400">@bmsce.in</span> college accounts are permitted
+            Google account selection is simulated for demo mode.
           </p>
         </div>
       </motion.div>
@@ -129,8 +130,8 @@ function CustomEmailForm({ onBack, onSignIn }: CustomEmailFormProps) {
 
   const handleSubmit = () => {
     const trimmed = email.trim().toLowerCase();
-    if (!trimmed.endsWith(`@${BMSCE_DOMAIN}`)) {
-      setError(`Only @${BMSCE_DOMAIN} college email addresses are allowed.`);
+    if (!/^\S+@\S+\.\S+$/.test(trimmed)) {
+      setError("Please enter a valid email address.");
       return;
     }
     if (!name.trim()) {
@@ -180,10 +181,10 @@ function CustomEmailForm({ onBack, onSignIn }: CustomEmailFormProps) {
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs text-gray-400">BMSCE Email</label>
+            <label className="text-xs text-gray-400">Email Address</label>
             <input
               type="email"
-              placeholder="usn@bmsce.in"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setError(""); }}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
@@ -213,7 +214,7 @@ function CustomEmailForm({ onBack, onSignIn }: CustomEmailFormProps) {
           </button>
 
           <p className="text-[10px] text-center text-gray-600">
-            Only BMS College of Engineering (@bmsce.in) student and faculty accounts are allowed.
+            Any valid email address can be used here.
           </p>
         </div>
       </motion.div>
@@ -226,14 +227,12 @@ export default function LoginPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [credentialError, setCredentialError] = useState("");
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleAccountSelect = (acc: { name: string; email: string; avatar?: string }) => {
-    if (!acc.email.endsWith(`@${BMSCE_DOMAIN}`)) {
-      setShowPicker(false);
-      setErrorMsg(`Only @${BMSCE_DOMAIN} accounts are allowed. "${acc.email}" is not permitted.`);
-      return;
-    }
     setIsSigningIn(true);
     setShowPicker(false);
     setTimeout(() => {
@@ -245,6 +244,36 @@ export default function LoginPage() {
       });
       setIsSigningIn(false);
     }, 1200);
+  };
+
+  const handlePasswordSignIn = () => {
+    const trimmedIdentifier = identifier.trim();
+    if (!trimmedIdentifier) {
+      setCredentialError("Enter your username or email.");
+      return;
+    }
+    if (!password.trim()) {
+      setCredentialError("Enter your password.");
+      return;
+    }
+
+    const displayName = trimmedIdentifier.includes("@")
+      ? trimmedIdentifier.split("@")[0]
+      : trimmedIdentifier;
+    const normalizedEmail = trimmedIdentifier.includes("@")
+      ? trimmedIdentifier.toLowerCase()
+      : `${trimmedIdentifier.toLowerCase()}@local.starvis`;
+
+    setCredentialError("");
+    setIsSigningIn(true);
+    setTimeout(() => {
+      signIn({
+        name: displayName,
+        email: normalizedEmail,
+        initials: getInitials(displayName),
+      });
+      setIsSigningIn(false);
+    }, 900);
   };
 
   const handleCustomSignIn = (name: string, email: string) => {
@@ -317,15 +346,15 @@ export default function LoginPage() {
                 <GraduationCap size={16} className="text-purple-300" />
               </div>
               <div>
-                <p className="text-white text-xs font-semibold">BMS College of Engineering</p>
-                <p className="text-gray-500 text-[10px]">Restricted to @bmsce.in accounts only</p>
+                <p className="text-white text-xs font-semibold">Flexible Sign In</p>
+                <p className="text-gray-500 text-[10px]">Use Google or username/email with password</p>
               </div>
             </div>
 
             <div className="space-y-1">
               <h2 className="text-lg font-bold text-white">Welcome back 👋</h2>
               <p className="text-gray-400 text-xs">
-                Sign in with your BMSCE Google account to continue.
+                Sign in with Google or with your username and password.
               </p>
             </div>
 
@@ -371,8 +400,63 @@ export default function LoginPage() {
 
             <p className="text-[10px] text-gray-600 text-center leading-relaxed">
               By continuing, you agree to STARVIS terms. <br />
-              Non-BMSCE accounts will be rejected.
+              Any valid account type is accepted in this demo.
             </p>
+
+            <div className="relative py-1">
+              <div className="h-px bg-white/10" />
+              <span className="absolute left-1/2 -translate-x-1/2 -top-2 text-[10px] text-gray-500 bg-[#12162a] px-2">OR</span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-gray-400">Username or Email</label>
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => { setIdentifier(e.target.value); setCredentialError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && handlePasswordSignIn()}
+                  placeholder="username or you@example.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-gray-400">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setCredentialError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && handlePasswordSignIn()}
+                  placeholder="Enter password"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50"
+                />
+              </div>
+
+              <AnimatePresence>
+                {credentialError && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20"
+                  >
+                    <AlertCircle size={14} className="text-red-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-red-300">{credentialError}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <motion.button
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handlePasswordSignIn}
+                disabled={isSigningIn}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-slate-700 to-slate-600 text-white font-semibold text-sm hover:from-slate-600 hover:to-slate-500 transition-all duration-200 shadow-lg disabled:opacity-60"
+              >
+                {isSigningIn ? "Signing you in..." : "Sign in with password"}
+              </motion.button>
+            </div>
           </div>
         </motion.div>
 
