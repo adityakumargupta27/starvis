@@ -4,7 +4,7 @@ import { Send, X, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// Reading API key inline to avoid HMR stale states
 
 interface Message {
   text: string;
@@ -62,7 +62,8 @@ const FloatingAssistant = () => {
   };
 
   const sendMessage = async (text: string) => {
-    if (!text.trim() || !GEMINI_API_KEY) return;
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!text.trim() || !apiKey) return;
 
     const userMessage: Message = { text, sender: "user", timestamp: new Date() };
     setMessages((prev) => [...prev, userMessage]);
@@ -77,7 +78,7 @@ const FloatingAssistant = () => {
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -91,7 +92,10 @@ const FloatingAssistant = () => {
         }
       );
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errText}`);
+      }
 
       const data = await response.json();
       const replyText =
@@ -103,10 +107,11 @@ const FloatingAssistant = () => {
         { text: replyText, sender: "assistant", timestamp: new Date() },
       ]);
     } catch (error) {
+      console.error("Gemini API Error:", error);
       setMessages((prev) => [
         ...prev,
         {
-          text: "⚠️ Connection error. Please check your API key or try again.",
+          text: `⚠️ Error: ${error instanceof Error ? error.message : "Unknown error"}`,
           sender: "assistant",
           timestamp: new Date(),
         },
@@ -277,12 +282,12 @@ const FloatingAssistant = () => {
                   type="submit"
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-9 w-9 p-0 flex-shrink-0"
-                  disabled={isLoading || !input.trim() || !GEMINI_API_KEY}
+                  disabled={isLoading || !input.trim() || !import.meta.env.VITE_GEMINI_API_KEY}
                 >
                   <Send size={14} />
                 </Button>
               </div>
-              {!GEMINI_API_KEY && (
+              {!import.meta.env.VITE_GEMINI_API_KEY && (
                 <p className="text-[10px] text-red-400 mt-1 text-center">
                   Set VITE_GEMINI_API_KEY to enable AI
                 </p>
