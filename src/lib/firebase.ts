@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, browserLocalPersistence, setPersistence } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,5 +13,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+
+// Use localStorage persistence to avoid sessionStorage issues in
+// Capacitor/WebView environments (fixes "missing initial state" error)
+setPersistence(auth, browserLocalPersistence).catch(() => {
+  // Silently ignore if persistence can't be set (e.g. private browsing)
+});
+
 export const googleProvider = new GoogleAuthProvider();
 export default app;

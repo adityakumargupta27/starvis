@@ -6,6 +6,7 @@ import {
   User as FirebaseUser,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  updateProfile,
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 
@@ -75,12 +76,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setAuthError(null);
+      // Configure popup to avoid blocking issues
+      googleProvider.setCustomParameters({ prompt: "select_account" });
       await signInWithPopup(auth, googleProvider);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Google sign-in failed";
-      // User cancelled popup — don't show error
-      if ((err as { code?: string }).code === "auth/popup-closed-by-user") return;
-      setAuthError(msg);
+      const code = (err as { code?: string }).code;
+      // Silently ignore user-cancelled popup
+      if (
+        code === "auth/popup-closed-by-user" ||
+        code === "auth/cancelled-popup-request"
+      ) return;
+      if (code === "auth/popup-blocked") {
+        setAuthError("Popup was blocked by your browser. Please allow popups for this site and try again.");
+      } else if (code === "auth/network-request-failed") {
+        setAuthError("Network error. Please check your connection and try again.");
+      } else {
+        const msg = err instanceof Error ? err.message : "Google sign-in failed";
+        setAuthError(msg);
+      }
     }
   };
 
@@ -104,8 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     try {
       setAuthError(null);
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Name will be updated via updateProfile separately if needed
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      // Save display name so the user object reflects correctly
+      if (name && result.user) {
+        await updateProfile(result.user, { displayName: name });
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       if (code === "auth/email-already-in-use") {

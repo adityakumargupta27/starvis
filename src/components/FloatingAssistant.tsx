@@ -16,6 +16,60 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/** Render markdown bold/italic/code inline — keeps stars from cluttering UI */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  // Split on **bold**, *italic*, and `code` patterns
+  const regex = /\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`/g;
+  let last = 0;
+  let match;
+  let key = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    if (match[1] !== undefined) {
+      parts.push(<strong key={key++} className="font-semibold text-white">{match[1]}</strong>);
+    } else if (match[2] !== undefined) {
+      parts.push(<em key={key++} className="italic text-purple-200">{match[2]}</em>);
+    } else if (match[3] !== undefined) {
+      parts.push(<code key={key++} className="bg-white/10 px-1 py-0.5 rounded text-[11px] font-mono">{match[3]}</code>);
+    }
+    last = regex.lastIndex;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts;
+}
+
+/** Render numbered and bullet lists, then inline markdown within each line */
+function MessageContent({ text }: { text: string }) {
+  const lines = text.split("\n");
+  return (
+    <div className="space-y-1">
+      {lines.map((line, i) => {
+        const numbered = line.match(/^(\d+)\.\s(.*)/);
+        const bullet = line.match(/^[-*]\s(.*)/);
+        if (numbered) {
+          return (
+            <div key={i} className="flex gap-1.5">
+              <span className="text-purple-400 font-semibold min-w-[16px]">{numbered[1]}.</span>
+              <span>{renderMarkdown(numbered[2])}</span>
+            </div>
+          );
+        }
+        if (bullet) {
+          return (
+            <div key={i} className="flex gap-1.5">
+              <span className="text-purple-400 mt-[3px]">•</span>
+              <span>{renderMarkdown(bullet[1])}</span>
+            </div>
+          );
+        }
+        if (line.trim() === "") return <div key={i} className="h-1" />;
+        return <div key={i}>{renderMarkdown(line)}</div>;
+      })}
+    </div>
+  );
+}
+
 function TypingIndicator() {
   return (
     <div className="flex gap-1 items-center px-3 py-2">
@@ -76,49 +130,73 @@ const FloatingAssistant = () => {
       parts: [{ text: m.text }],
     }));
 
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: STUDY_SYSTEM_PROMPT }] },
-            contents: [
-              ...history,
-              { role: "user", parts: [{ text }] },
-            ],
-          }),
+    const MAX_RETRIES = 2;
+    let attempt = 0;
+    while (attempt <= MAX_RETRIES) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: STUDY_SYSTEM_PROMPT }] },
+              contents: [
+                ...history,
+                { role: "user", parts: [{ text }] },
+              ],
+            }),
+          }
+        );
+
+        // Retry on 503 overload
+        if (response.status === 503 && attempt < MAX_RETRIES) {
+          attempt++;
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
+          continue;
         }
-      );
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errText}`);
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({})) as { error?: { code?: number; message?: string } };
+          const isOverload = response.status === 503 ||
+            errData?.error?.message?.toLowerCase().includes("overload") ||
+            errData?.error?.message?.toLowerCase().includes("unavailable");
+          if (isOverload) {
+            throw new Error("__OVERLOAD__");
+          }
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const replyText =
+          data.candidates?.[0]?.content?.parts?.[0]?.text ||
+          "Sorry, I couldn't process that. Try again!";
+
+        setMessages((prev) => [
+          ...prev,
+          { text: replyText, sender: "assistant", timestamp: new Date() },
+        ]);
+        break; // success
+      } catch (error) {
+        const isOverload =
+          error instanceof Error && error.message === "__OVERLOAD__";
+        if (isOverload && attempt < MAX_RETRIES) {
+          attempt++;
+          await new Promise((r) => setTimeout(r, 1500 * attempt));
+          continue;
+        }
+        console.error("Gemini API Error:", error);
+        const friendlyMsg = isOverload
+          ? "🙏 The AI is a bit overloaded right now. Please try again in a moment!"
+          : "Something went wrong. Please try again in a bit.";
+        setMessages((prev) => [
+          ...prev,
+          { text: friendlyMsg, sender: "assistant", timestamp: new Date() },
+        ]);
+        break;
       }
-
-      const data = await response.json();
-      const replyText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "Sorry, I couldn't process that. Try again!";
-
-      setMessages((prev) => [
-        ...prev,
-        { text: replyText, sender: "assistant", timestamp: new Date() },
-      ]);
-    } catch (error) {
-      console.error("Gemini API Error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          text: `⚠️ Error: ${error instanceof Error ? error.message : "Unknown error"}`,
-          sender: "assistant",
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   const handleSendMessage = (e: FormEvent) => {
@@ -246,7 +324,11 @@ const FloatingAssistant = () => {
                         }`}
                         style={msg.sender === "assistant" ? { background: "rgba(255,255,255,0.07)" } : {}}
                       >
-                        {msg.text}
+                        {msg.sender === "assistant" ? (
+                          <MessageContent text={msg.text} />
+                        ) : (
+                          msg.text
+                        )}
                       </div>
                       <span className="text-[10px] text-gray-600 px-1">{formatTime(msg.timestamp)}</span>
                     </motion.div>

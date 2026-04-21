@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useStudyProfile } from "@/hooks/useStudyProfile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,15 +98,19 @@ function ToggleRow({ label, description, value, onChange }: {
   );
 }
 
+const SETTINGS_KEY = "starvis_ui_settings";
+
 export default function SettingsPage() {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  const { profile, saveProfile } = useStudyProfile();
+
   const [settings, setSettings] = useState<SettingsState>({
     name: user?.name || "Student",
     email: user?.email || "",
-    course: "B.Tech Computer Science",
-    year: "2nd Year",
-    dailyGoal: 4,
+    course: profile.course || "",
+    year: profile.year || "",
+    dailyGoal: profile.dailyGoalHours || 4,
     accent: "purple",
     notifications: true,
     studyReminders: true,
@@ -116,13 +121,56 @@ export default function SettingsPage() {
     aiPersonality: "friendly",
   });
 
+  // Load persisted UI settings on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<SettingsState>;
+        setSettings((prev) => ({ ...prev, ...saved }));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Always keep name/email/course/year in sync with live auth + profile
+  useEffect(() => {
+    setSettings((prev) => ({
+      ...prev,
+      name: user?.name || prev.name,
+      email: user?.email || prev.email,
+      course: profile.course || prev.course,
+      year: profile.year || prev.year,
+      dailyGoal: profile.dailyGoalHours || prev.dailyGoal,
+    }));
+  }, [user, profile]);
+
   const set = <K extends keyof SettingsState>(key: K, val: SettingsState[K]) =>
-    setSettings(s => ({ ...s, [key]: val }));
+    setSettings((s) => ({ ...s, [key]: val }));
 
   const handleSave = () => {
+    // Persist UI prefs to localStorage
+    const toSave: Partial<SettingsState> = {
+      accent: settings.accent,
+      notifications: settings.notifications,
+      studyReminders: settings.studyReminders,
+      assignmentAlerts: settings.assignmentAlerts,
+      soundEffects: settings.soundEffects,
+      haptics: settings.haptics,
+      darkMode: settings.darkMode,
+      aiPersonality: settings.aiPersonality,
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(toSave));
+
+    // Persist study profile data (course/year/dailyGoal) to shared hook
+    saveProfile({
+      course: settings.course,
+      year: settings.year,
+      dailyGoalHours: settings.dailyGoal,
+    });
+
     toast({
       title: "Settings saved! ✅",
-      description: "Your preferences have been updated.",
+      description: "All your preferences have been updated.",
     });
   };
 
