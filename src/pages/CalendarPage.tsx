@@ -18,6 +18,8 @@ import {
   Pencil,
   Check,
 } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type EventType = "exam" | "assignment" | "study" | "class";
 
@@ -37,9 +39,7 @@ const typeConfig: Record<EventType, { color: string; bg: string; dot: string; ic
   class:      { color: "text-green-300",  bg: "bg-green-500/20 border-green-500/30",   dot: "bg-green-400",  icon: <Laptop size={12} />,      label: "Class" },
 };
 
-const SEED_EVENTS: CalEvent[] = [
-  // Start empty — user adds their own
-];
+const SEED_EVENTS: CalEvent[] = [];
 
 const STORAGE_KEY = "starvis_calendar_events";
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -206,6 +206,7 @@ function EventModal({ date, event, onSave, onDelete, onClose }: EventModalProps)
 
 /* ─── CalendarPage ─────────────────────────────────────────────────────── */
 export default function CalendarPage() {
+  const { user } = useAuth();
   const today = new Date();
   const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -221,24 +222,56 @@ export default function CalendarPage() {
     event?: CalEvent;
   }>({ open: false, date: todayKey });
 
-  // Load from localStorage
+  // Load from API
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setEvents(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
+    if (!user) return;
+    const fetchEvents = async () => {
+      try {
+        const data = await api.get("/events");
+        setEvents(data.map((e: any) => ({ ...e, id: e._id })));
+      } catch (err) {
+        console.error("Failed to fetch events, falling back to localStorage", err);
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) setEvents(JSON.parse(raw));
+        } catch { /* ignore */ }
+      }
+    };
+    fetchEvents();
+  }, [user]);
 
-  const persist = (next: CalEvent[]) => {
-    setEvents(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  };
-
-  const addOrUpdateEvent = (e: CalEvent) => {
-    const next = events.some((x) => x.id === e.id)
+  const addOrUpdateEvent = async (e: CalEvent) => {
+    const isEdit = events.some((x) => x.id === e.id);
+    const next = isEdit
       ? events.map((x) => (x.id === e.id ? e : x))
       : [...events, e];
-    persist(next);
+    
+    setEvents(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+    try {
+      if (isEdit) {
+        await api.put(`/events/${e.id}`, {
+          title: e.title,
+          date: e.date,
+          type: e.type,
+          time: e.time,
+          course: e.course,
+        });
+      } else {
+        const saved = await api.post("/events", {
+          title: e.title,
+          date: e.date,
+          type: e.type,
+          time: e.time,
+          course: e.course,
+        });
+        setEvents((prev) => prev.map((x) => (x.id === e.id ? { ...saved, id: saved._id } : x)));
+      }
+    } catch (err) {
+      console.error("Failed to save event on server", err);
+    }
+
     // Jump to the saved event's date
     setSelected(e.date);
     const d = new Date(e.date + "T00:00:00");
@@ -246,8 +279,19 @@ export default function CalendarPage() {
     setViewMonth(d.getMonth());
   };
 
-  const deleteEvent = (id: string) => {
-    persist(events.filter((x) => x.id !== id));
+  const deleteEvent = async (id: string) => {
+    const backup = [...events];
+    const next = events.filter((x) => x.id !== id);
+    setEvents(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+    try {
+      await api.delete(`/events/${id}`);
+    } catch (err) {
+      console.error("Failed to delete event on server", err);
+      setEvents(backup);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(backup));
+    }
   };
 
   const openAdd = (date: string) => setModal({ open: true, date });

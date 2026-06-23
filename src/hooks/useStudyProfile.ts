@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface StudyProfile {
   name: string;
@@ -43,33 +45,62 @@ const DEFAULT_PROFILE: StudyProfile = {
 const STORAGE_KEY = "starvis_study_profile";
 
 export function useStudyProfile() {
-  // Always start with defaults so dashboard is never blank
+  const { user } = useAuth();
   const [profile, setProfile] = useState<StudyProfile>(DEFAULT_PROFILE);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        // Merge saved data on top of defaults so new fields don't go missing
-        const parsed = JSON.parse(raw) as Partial<StudyProfile>;
-        setProfile((prev) => ({ ...prev, ...parsed }));
-      }
-    } catch {
-      // ignore parse errors — fall back to defaults
-    }
-  }, []);
+    if (!user) return;
 
-  const saveProfile = (updates: Partial<StudyProfile>) => {
+    const fetchProfile = async () => {
+      try {
+        const data = await api.get("/profile");
+        if (data) {
+          setProfile(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch study profile from server, falling back to localStorage", err);
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw) as Partial<StudyProfile>;
+            setProfile((prev) => ({ ...prev, ...parsed }));
+          }
+        } catch {
+          // ignore localStorage parsing errors
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [user]);
+
+  const saveProfile = async (updates: Partial<StudyProfile>) => {
     setProfile((prev) => {
       const next = { ...prev, ...updates };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;
     });
+
+    if (user) {
+      try {
+        await api.put("/profile", updates);
+      } catch (err) {
+        console.error("Failed to save study profile to server", err);
+      }
+    }
   };
 
-  const resetProfile = () => {
+  const resetProfile = async () => {
     localStorage.removeItem(STORAGE_KEY);
     setProfile(DEFAULT_PROFILE);
+
+    if (user) {
+      try {
+        await api.put("/profile", DEFAULT_PROFILE);
+      } catch (err) {
+        console.error("Failed to reset study profile on server", err);
+      }
+    }
   };
 
   return { profile, saveProfile, resetProfile };

@@ -22,6 +22,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/lib/api";
 
 const DAILY_GOAL_OPTIONS = [2, 4, 6, 8, 10];
 
@@ -123,14 +124,36 @@ export default function SettingsPage() {
 
   // Load persisted UI settings on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as Partial<SettingsState>;
-        setSettings((prev) => ({ ...prev, ...saved }));
+    if (!user) return;
+    const fetchSettings = async () => {
+      try {
+        const data = await api.get("/settings");
+        if (data) {
+          setSettings((prev) => ({
+            ...prev,
+            accent: data.accent,
+            notifications: data.notifications,
+            studyReminders: data.studyReminders,
+            assignmentAlerts: data.assignmentAlerts,
+            soundEffects: data.soundEffects,
+            haptics: data.haptics,
+            darkMode: data.darkMode,
+            aiPersonality: data.aiPersonality,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch settings from server, falling back to localStorage", err);
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          if (raw) {
+            const saved = JSON.parse(raw) as Partial<SettingsState>;
+            setSettings((prev) => ({ ...prev, ...saved }));
+          }
+        } catch { /* ignore */ }
       }
-    } catch { /* ignore */ }
-  }, []);
+    };
+    fetchSettings();
+  }, [user]);
 
   // Always keep name/email/course/year in sync with live auth + profile
   useEffect(() => {
@@ -147,9 +170,9 @@ export default function SettingsPage() {
   const set = <K extends keyof SettingsState>(key: K, val: SettingsState[K]) =>
     setSettings((s) => ({ ...s, [key]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     // Persist UI prefs to localStorage
-    const toSave: Partial<SettingsState> = {
+    const toSave = {
       accent: settings.accent,
       notifications: settings.notifications,
       studyReminders: settings.studyReminders,
@@ -167,6 +190,12 @@ export default function SettingsPage() {
       year: settings.year,
       dailyGoalHours: settings.dailyGoal,
     });
+
+    try {
+      await api.put("/settings", toSave);
+    } catch (err) {
+      console.error("Failed to save settings to server", err);
+    }
 
     toast({
       title: "Settings saved! ✅",

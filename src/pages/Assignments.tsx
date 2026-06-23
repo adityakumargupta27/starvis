@@ -26,6 +26,8 @@ import { Label } from "@/components/ui/label";
 import SpaceBackground from "@/components/SpaceBackground";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, CheckCircle, Clock, AlertTriangle, BookOpen, Filter } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Status = "Not Started" | "In Progress" | "Completed";
 type Priority = "Low" | "Medium" | "High";
@@ -90,15 +92,8 @@ function DueDateBadge({ dueDate, status }: { dueDate: string; status: Status }) 
 const STORAGE_KEY = "starvis_assignments";
 
 export default function Assignments() {
-  const [assignments, setAssignments] = useState<Assignment[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : defaultAssignments;
-    } catch {
-      return defaultAssignments;
-    }
-  });
-
+  const { user } = useAuth();
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filterStatus, setFilterStatus] = useState<Status | "All">("All");
   const [filterPriority, setFilterPriority] = useState<Priority | "All">("All");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -111,28 +106,80 @@ export default function Assignments() {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments));
-  }, [assignments]);
+    if (!user) return;
+    const fetchAssignments = async () => {
+      try {
+        const data = await api.get("/assignments");
+        setAssignments(data.map((a: any) => ({ ...a, id: a._id })));
+      } catch (err) {
+        console.error("Failed to fetch assignments, falling back to localStorage", err);
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            setAssignments(JSON.parse(stored));
+          } else {
+            setAssignments(defaultAssignments);
+          }
+        } catch {
+          setAssignments(defaultAssignments);
+        }
+      }
+    };
+    fetchAssignments();
+  }, [user]);
 
-  const addAssignment = () => {
+  const addAssignment = async () => {
     if (!newForm.course.trim() || !newForm.assignment.trim() || !newForm.dueDate) return;
-    const entry: Assignment = { ...newForm, id: Date.now().toString() };
+    const tempId = Date.now().toString();
+    const entry: Assignment = { ...newForm, id: tempId };
     setAssignments((prev) => [entry, ...prev]);
     setNewForm({ course: "", assignment: "", dueDate: "", status: "Not Started", priority: "Medium" });
     setDialogOpen(false);
+
+    try {
+      const saved = await api.post("/assignments", newForm);
+      setAssignments((prev) => prev.map((a) => (a.id === tempId ? { ...saved, id: saved._id } : a)));
+    } catch (err) {
+      console.error("Failed to add assignment on server", err);
+    }
   };
 
-  const deleteAssignment = (id: string) => {
+  const deleteAssignment = async (id: string) => {
+    const backup = [...assignments];
     setAssignments((prev) => prev.filter((a) => a.id !== id));
+
+    try {
+      await api.delete(`/assignments/${id}`);
+    } catch (err) {
+      console.error("Failed to delete assignment on server", err);
+      setAssignments(backup);
+    }
   };
 
-  const cycleStatus = (id: string) => {
+  const cycleStatus = async (id: string) => {
+    const target = assignments.find((a) => a.id === id);
+    if (!target) return;
+
     const order: Status[] = ["Not Started", "In Progress", "Completed"];
+    const nextStatus = order[(order.indexOf(target.status) + 1) % order.length];
+
     setAssignments((prev) =>
       prev.map((a) =>
-        a.id === id ? { ...a, status: order[(order.indexOf(a.status) + 1) % order.length] } : a
+        a.id === id ? { ...a, status: nextStatus } : a
       )
     );
+
+    try {
+      await api.put(`/assignments/${id}`, { status: nextStatus });
+    } catch (err) {
+      console.error("Failed to update assignment status on server", err);
+      // Revert if error
+      setAssignments((prev) =>
+        prev.map((a) =>
+          a.id === id ? { ...a, status: target.status } : a
+        )
+      );
+    }
   };
 
   const filtered = assignments.filter((a) => {

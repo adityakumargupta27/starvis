@@ -460,7 +460,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-[10px] text-gray-700 mt-5 tracking-wider">
-          STARVIS v1.0 · Secured by Firebase
+          STARVIS v1.0 · Secured by MongoDB
         </p>
       </motion.div>
     </div>

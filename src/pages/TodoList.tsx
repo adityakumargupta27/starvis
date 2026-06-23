@@ -13,6 +13,7 @@ import {
 import SpaceBackground from "@/components/SpaceBackground";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, CheckSquare, Square, ListTodo, Star } from "lucide-react";
+import { api } from "@/lib/api";
 
 type Priority = "Low" | "Medium" | "High";
 type Category = "General" | "Study" | "Assignment" | "Personal" | "Exam Prep";
@@ -43,15 +44,7 @@ const categoryColors: Record<Category, string> = {
 };
 
 export default function TodoList() {
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [newText, setNewText] = useState("");
   const [newPriority, setNewPriority] = useState<Priority>("Medium");
   const [newCategory, setNewCategory] = useState<Category>("General");
@@ -59,35 +52,87 @@ export default function TodoList() {
   const [showCompleted, setShowCompleted] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  }, [tasks]);
+    const fetchTodos = async () => {
+      try {
+        const data = await api.get("/todos");
+        setTasks(data.map((t: any) => ({ ...t, id: t._id })));
+      } catch (err) {
+        console.error("Failed to fetch todos, falling back to localStorage", err);
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) setTasks(JSON.parse(stored));
+        } catch {
+          setTasks([]);
+        }
+      }
+    };
+    fetchTodos();
+  }, []);
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!newText.trim()) return;
-    const task: Task = {
-      id: Date.now().toString(),
+    const taskPayload = {
       text: newText.trim(),
       completed: false,
       priority: newPriority,
       category: newCategory,
-      createdAt: Date.now(),
     };
-    setTasks((prev) => [task, ...prev]);
+
+    const tempId = Date.now().toString();
+    const tempTask: Task = { ...taskPayload, id: tempId, createdAt: Date.now() };
+    setTasks((prev) => [tempTask, ...prev]);
     setNewText("");
+
+    try {
+      const savedTask = await api.post("/todos", taskPayload);
+      setTasks((prev) => prev.map((t) => (t.id === tempId ? { ...savedTask, id: savedTask._id } : t)));
+    } catch (err) {
+      console.error("Failed to add task on server", err);
+    }
   };
 
-  const toggleTask = (id: string) => {
+  const toggleTask = async (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (!target) return;
+
+    const nextCompleted = !target.completed;
     setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
+      prev.map((t) => (t.id === id ? { ...t, completed: nextCompleted } : t))
     );
+
+    try {
+      await api.put(`/todos/${id}`, { completed: nextCompleted });
+    } catch (err) {
+      console.error("Failed to update task completion status on server", err);
+      // Revert UI if server update fails
+      setTasks((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, completed: !nextCompleted } : t))
+      );
+    }
   };
 
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
+    const backup = [...tasks];
     setTasks((prev) => prev.filter((t) => t.id !== id));
+
+    try {
+      await api.delete(`/todos/${id}`);
+    } catch (err) {
+      console.error("Failed to delete task on server", err);
+      setTasks(backup);
+    }
   };
 
-  const clearCompleted = () => {
+  const clearCompleted = async () => {
+    const backup = [...tasks];
     setTasks((prev) => prev.filter((t) => !t.completed));
+
+    try {
+      await api.delete("/todos/completed/clear");
+    } catch (err) {
+      console.error("Failed to clear completed tasks on server", err);
+      setTasks(backup);
+    }
   };
 
   const filtered = tasks.filter((t) => {

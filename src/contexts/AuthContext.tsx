@@ -1,14 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import {
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut as firebaseSignOut,
-  User as FirebaseUser,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  updateProfile,
-} from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { api } from "@/lib/api";
 
 export interface User {
   name: string;
@@ -21,7 +12,7 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  firebaseUser: FirebaseUser | null;
+  firebaseUser: null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
@@ -33,83 +24,71 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
-function firebaseUserToUser(fbUser: FirebaseUser): User {
-  const name = fbUser.displayName || fbUser.email?.split("@")[0] || "User";
-  return {
-    name,
-    email: fbUser.email || "",
-    avatar: fbUser.photoURL || undefined,
-    initials: getInitials(name),
-    uid: fbUser.uid,
-  };
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        setUser(firebaseUserToUser(fbUser));
-      } else {
-        setFirebaseUser(null);
-        setUser(null);
+    const token = localStorage.getItem("starvis_jwt_token");
+    const storedUser = localStorage.getItem("starvis_user");
+    if (token && storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("starvis_jwt_token");
+        localStorage.removeItem("starvis_user");
       }
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
+    }
+    setIsLoading(false);
   }, []);
 
   const signInWithGoogle = async () => {
     try {
       setAuthError(null);
-      // Configure popup to avoid blocking issues
-      googleProvider.setCustomParameters({ prompt: "select_account" });
-      await signInWithPopup(auth, googleProvider);
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      // Silently ignore user-cancelled popup
-      if (
-        code === "auth/popup-closed-by-user" ||
-        code === "auth/cancelled-popup-request"
-      ) return;
-      if (code === "auth/popup-blocked") {
-        setAuthError("Popup was blocked by your browser. Please allow popups for this site and try again.");
-      } else if (code === "auth/network-request-failed") {
-        setAuthError("Network error. Please check your connection and try again.");
-      } else {
-        const msg = err instanceof Error ? err.message : "Google sign-in failed";
-        setAuthError(msg);
-      }
+      const mockGoogleProfile = {
+        name: "Google Student",
+        email: "google.student@bmsce.in",
+        avatar: "",
+        googleId: "google-oauth-id-123456"
+      };
+
+      const data = await api.post("/auth/google", mockGoogleProfile);
+      localStorage.setItem("starvis_jwt_token", data.token);
+      const userObj = {
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar,
+        initials: data.initials,
+        uid: data.uid,
+      };
+      localStorage.setItem("starvis_user", JSON.stringify(userObj));
+      setUser(userObj);
+
+      await syncLocalStorageToMongoDB();
+    } catch (err: any) {
+      setAuthError(err.message || "Google sign-in failed");
     }
   };
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
       setAuthError(null);
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") {
-        setAuthError("Invalid email or password. Please try again.");
-      } else if (code === "auth/too-many-requests") {
-        setAuthError("Too many attempts. Please try again later.");
-      } else {
-        setAuthError(err instanceof Error ? err.message : "Sign-in failed");
-      }
+      const data = await api.post("/auth/login", { email, password });
+      localStorage.setItem("starvis_jwt_token", data.token);
+      const userObj = {
+        name: data.name,
+        email: data.email,
+        avatar: data.avatar,
+        initials: data.initials,
+        uid: data.uid,
+      };
+      localStorage.setItem("starvis_user", JSON.stringify(userObj));
+      setUser(userObj);
+
+      await syncLocalStorageToMongoDB();
+    } catch (err: any) {
+      setAuthError(err.message || "Sign-in failed");
       throw err;
     }
   };
@@ -117,38 +96,121 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithEmail = async (email: string, password: string, name: string) => {
     try {
       setAuthError(null);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      // Save display name so the user object reflects correctly
-      if (name && result.user) {
-        await updateProfile(result.user, { displayName: name });
-      }
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code;
-      if (code === "auth/email-already-in-use") {
-        setAuthError("Account already exists. Try signing in.");
-      } else if (code === "auth/weak-password") {
-        setAuthError("Password should be at least 6 characters.");
-      } else {
-        setAuthError(err instanceof Error ? err.message : "Sign-up failed");
-      }
+      const data = await api.post("/auth/register", { name, email, password });
+      localStorage.setItem("starvis_jwt_token", data.token);
+      const userObj = {
+        name: data.name,
+        email: data.email,
+        initials: data.initials,
+        uid: data.uid,
+      };
+      localStorage.setItem("starvis_user", JSON.stringify(userObj));
+      setUser(userObj);
+
+      await syncLocalStorageToMongoDB();
+    } catch (err: any) {
+      setAuthError(err.message || "Sign-up failed");
       throw err;
     }
   };
 
   // Legacy fallback (keeps existing code from crashing)
-  const signIn = (u: User) => setUser(u);
+  const signIn = (u: User) => {
+    setUser(u);
+    localStorage.setItem("starvis_user", JSON.stringify(u));
+  };
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    localStorage.removeItem("starvis_jwt_token");
+    localStorage.removeItem("starvis_user");
     setUser(null);
-    setFirebaseUser(null);
   };
 
   const clearAuthError = () => setAuthError(null);
 
+  // Migration Helper: Sync existing localStorage data to MongoDB upon sign in
+  const syncLocalStorageToMongoDB = async () => {
+    try {
+      // 1. Sync Study Profile
+      const rawProfile = localStorage.getItem("starvis_study_profile");
+      if (rawProfile) {
+        const parsed = JSON.parse(rawProfile);
+        await api.put("/profile", parsed);
+      }
+
+      // 2. Sync Todos
+      const rawTodos = localStorage.getItem("starvis_todos");
+      if (rawTodos) {
+        const parsed = JSON.parse(rawTodos);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const currentTodos = await api.get("/todos");
+          if (currentTodos.length === 0) {
+            for (const item of parsed) {
+              await api.post("/todos", {
+                text: item.text,
+                completed: item.completed,
+                priority: item.priority,
+                category: item.category,
+              });
+            }
+          }
+        }
+      }
+
+      // 3. Sync Calendar Events
+      const rawEvents = localStorage.getItem("starvis_calendar_events");
+      if (rawEvents) {
+        const parsed = JSON.parse(rawEvents);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const currentEvents = await api.get("/events");
+          if (currentEvents.length === 0) {
+            for (const item of parsed) {
+              await api.post("/events", {
+                title: item.title,
+                date: item.date,
+                type: item.type,
+                time: item.time,
+                course: item.course,
+              });
+            }
+          }
+        }
+      }
+
+      // 4. Sync Assignments
+      const rawAssignments = localStorage.getItem("starvis_assignments");
+      if (rawAssignments) {
+        const parsed = JSON.parse(rawAssignments);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const currentAssignments = await api.get("/assignments");
+          if (currentAssignments.length === 0) {
+            for (const item of parsed) {
+              await api.post("/assignments", {
+                course: item.course,
+                assignment: item.assignment,
+                dueDate: item.dueDate,
+                status: item.status,
+                priority: item.priority,
+              });
+            }
+          }
+        }
+      }
+
+      // 5. Sync Settings
+      const rawSettings = localStorage.getItem("starvis_ui_settings");
+      if (rawSettings) {
+        const parsed = JSON.parse(rawSettings);
+        await api.put("/settings", parsed);
+      }
+    } catch (error) {
+      console.error("Migration/Synchronization failed:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, firebaseUser, signInWithGoogle, signInWithEmail, signUpWithEmail, signIn, signOut, authError, clearAuthError }}
+      value={{ user, isLoading, firebaseUser: null, signInWithGoogle, signInWithEmail, signUpWithEmail, signIn, signOut, authError, clearAuthError }}
     >
       {children}
     </AuthContext.Provider>
