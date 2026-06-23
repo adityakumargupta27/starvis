@@ -24,6 +24,14 @@ const userSchema = mongoose.Schema(
     googleId: {
       type: String,
     },
+    plan: {
+      type: String,
+      enum: ["free", "pro", "premium"],
+      default: "free",
+    },
+    planExpiresAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

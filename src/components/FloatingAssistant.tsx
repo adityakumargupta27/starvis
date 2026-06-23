@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, Bot, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { api } from "@/lib/api";
 
 // Reading API key inline to avoid HMR stale states
 
@@ -116,8 +117,7 @@ const FloatingAssistant = () => {
   };
 
   const sendMessage = async (text: string) => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!text.trim() || !apiKey) return;
+    if (!text.trim()) return;
 
     const userMessage: Message = { text, sender: "user", timestamp: new Date() };
     setMessages((prev) => [...prev, userMessage]);
@@ -126,77 +126,29 @@ const FloatingAssistant = () => {
 
     // Build conversation history for context
     const history = messages.slice(-8).map((m) => ({
-      role: m.sender === "user" ? "user" : "model",
-      parts: [{ text: m.text }],
+      role: m.sender === "user" ? "user" : "assistant",
+      content: m.text,
     }));
 
-    const MAX_RETRIES = 2;
-    let attempt = 0;
-    while (attempt <= MAX_RETRIES) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: STUDY_SYSTEM_PROMPT }] },
-              contents: [
-                ...history,
-                { role: "user", parts: [{ text }] },
-              ],
-            }),
-          }
-        );
+    try {
+      const data = await api.post<{ reply: string }>("/ai/chat", {
+        message: text,
+        history,
+      });
 
-        // Retry on 503 overload
-        if (response.status === 503 && attempt < MAX_RETRIES) {
-          attempt++;
-          await new Promise((r) => setTimeout(r, 1500 * attempt));
-          continue;
-        }
-
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({})) as { error?: { code?: number; message?: string } };
-          const isOverload = response.status === 503 ||
-            errData?.error?.message?.toLowerCase().includes("overload") ||
-            errData?.error?.message?.toLowerCase().includes("unavailable");
-          if (isOverload) {
-            throw new Error("__OVERLOAD__");
-          }
-          throw new Error(`HTTP ${response.status}`);
-        }
-
-        const data = await response.json();
-        const replyText =
-          data.candidates?.[0]?.content?.parts?.[0]?.text ||
-          "Sorry, I couldn't process that. Try again!";
-
-        setMessages((prev) => [
-          ...prev,
-          { text: replyText, sender: "assistant", timestamp: new Date() },
-        ]);
-        break; // success
-      } catch (error) {
-        const isOverload =
-          error instanceof Error && error.message === "__OVERLOAD__";
-        if (isOverload && attempt < MAX_RETRIES) {
-          attempt++;
-          await new Promise((r) => setTimeout(r, 1500 * attempt));
-          continue;
-        }
-        console.error("Gemini API Error:", error);
-        const friendlyMsg = isOverload
-          ? "🙏 The AI is a bit overloaded right now. Please try again in a moment!"
-          : "Something went wrong. Please try again in a bit.";
-        setMessages((prev) => [
-          ...prev,
-          { text: friendlyMsg, sender: "assistant", timestamp: new Date() },
-        ]);
-        break;
-      }
+      setMessages((prev) => [
+        ...prev,
+        { text: data.reply, sender: "assistant", timestamp: new Date() },
+      ]);
+    } catch (error) {
+      console.error("Gemini API Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        { text: "Something went wrong. Please try again in a bit.", sender: "assistant", timestamp: new Date() },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleSendMessage = (e: FormEvent) => {
@@ -364,16 +316,11 @@ const FloatingAssistant = () => {
                   type="submit"
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl h-9 w-9 p-0 flex-shrink-0"
-                  disabled={isLoading || !input.trim() || !import.meta.env.VITE_GEMINI_API_KEY}
+                  disabled={isLoading || !input.trim()}
                 >
                   <Send size={14} />
                 </Button>
               </div>
-              {!import.meta.env.VITE_GEMINI_API_KEY && (
-                <p className="text-[10px] text-red-400 mt-1 text-center">
-                  Set VITE_GEMINI_API_KEY to enable AI
-                </p>
-              )}
             </form>
           </motion.div>
         )}

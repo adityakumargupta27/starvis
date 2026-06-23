@@ -115,6 +115,30 @@
     overscroll-behavior-y: contain;
   }
 
+  /* Custom thin scrollbar for scrollable containers */
+  .scroll-container::-webkit-scrollbar,
+  main::-webkit-scrollbar,
+  [data-scrollable]::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scroll-container::-webkit-scrollbar-track,
+  main::-webkit-scrollbar-track,
+  [data-scrollable]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-container::-webkit-scrollbar-thumb,
+  main::-webkit-scrollbar-thumb,
+  [data-scrollable]::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.2); /* purple-500/20 */
+    border-radius: 9999px;
+  }
+  .scroll-container::-webkit-scrollbar-thumb:hover,
+  main::-webkit-scrollbar-thumb:hover,
+  [data-scrollable]::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.4); /* purple-500/40 */
+  }
+
   /* Safe area padding helper classes */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);

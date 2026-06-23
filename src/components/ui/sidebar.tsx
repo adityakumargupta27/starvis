@@ -8,14 +8,29 @@ import {
   CalendarDays,
   Settings,
   Sparkles,
+  CreditCard,
+  FileText,
+  FolderOpen,
+  Layers,
+  Timer,
+  GraduationCap,
+  TrendingUp,
 } from "lucide-react";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/notes", label: "AI Notes", icon: FileText },
+  { to: "/documents", label: "Documents", icon: FolderOpen },
+  { to: "/flashcards", label: "Flashcards", icon: Layers },
+  { to: "/pomodoro", label: "Pomodoro", icon: Timer },
   { to: "/assignments", label: "Assignments", icon: ClipboardList },
   { to: "/todo", label: "To-Do List", icon: CheckSquare },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
+  { to: "/attendance", label: "Attendance", icon: GraduationCap },
+  { to: "/cgpa", label: "CGPA Tracker", icon: TrendingUp },
+  { to: "/study-planner", label: "AI Study Planner", icon: Sparkles },
+  { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -37,7 +52,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav items */}
-      <nav className="flex flex-col gap-1 px-3 py-4 flex-1">
+      <nav className="flex flex-col gap-1 px-3 py-4 flex-1 overflow-y-auto scroll-container">
         {navItems.map((item) => (
           <NavLink
             key={item.label}

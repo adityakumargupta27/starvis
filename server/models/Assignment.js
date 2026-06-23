@@ -35,6 +35,8 @@ const assignmentSchema = mongoose.Schema(
   }
 );
 
+assignmentSchema.index({ userId: 1, status: 1 });
+
 const Assignment = mongoose.model("Assignment", assignmentSchema);
 
 export { assignmentSchema };

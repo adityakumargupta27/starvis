@@ -2,6 +2,7 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
+import { sendWelcomeEmail, sendLoginAlertEmail } from "../services/emailService.js";
 
 const router = express.Router();
 
@@ -45,11 +46,15 @@ router.post("/register", async (req, res) => {
     });
 
     if (user) {
+      sendWelcomeEmail(user.email, user.name).catch((err) =>
+        console.error("Welcome email failed:", err.message)
+      );
       res.status(201).json({
         uid: user._id,
         name: user.name,
         email: user.email,
         initials: user.initials,
+        plan: user.plan || "free",
         token: generateToken(user._id),
       });
     } else {
@@ -70,12 +75,16 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (user && user.password && (await bcrypt.compare(password, user.password))) {
+      sendLoginAlertEmail(user.email, user.name).catch((err) =>
+        console.error("Login alert email failed:", err.message)
+      );
       res.json({
         uid: user._id,
         name: user.name,
         email: user.email,
         initials: user.initials,
         avatar: user.avatar,
+        plan: user.plan || "free",
         token: generateToken(user._id),
       });
     } else {
@@ -112,6 +121,9 @@ router.post("/google", async (req, res) => {
         initials,
         googleId,
       });
+      sendWelcomeEmail(user.email, user.name).catch((err) =>
+        console.error("Welcome email failed:", err.message)
+      );
     }
 
     res.json({
@@ -120,6 +132,37 @@ router.post("/google", async (req, res) => {
       email: user.email,
       initials: user.initials,
       avatar: user.avatar,
+      plan: user.plan || "free",
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @desc    Guest login/signup
+// @route   POST /api/auth/guest
+// @access  Public
+router.post("/guest", async (req, res) => {
+  try {
+    const randomId = Math.random().toString(36).substring(2, 7);
+    const name = `Guest ${randomId}`;
+    const email = `guest_${randomId}@starvis.app`;
+    const initials = "G";
+
+    const user = await User.create({
+      name,
+      email,
+      initials,
+      password: await bcrypt.hash(Math.random().toString(36), 10),
+    });
+
+    res.status(201).json({
+      uid: user._id,
+      name: user.name,
+      email: user.email,
+      initials: user.initials,
+      plan: user.plan || "free",
       token: generateToken(user._id),
     });
   } catch (error) {

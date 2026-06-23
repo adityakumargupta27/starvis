@@ -97,7 +97,7 @@ function ErrorBanner({ msg }: { msg: string }) {
 type View = "main" | "email-signin" | "email-signup";
 
 export default function LoginPage() {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, authError, clearAuthError } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInAsGuest, authError, clearAuthError } = useAuth();
   const [view, setView] = useState<View>("main");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,6 +118,13 @@ export default function LoginPage() {
 
   const clearErrors = () => { setLocalError(""); clearAuthError(); };
   const goBack = () => { setView("main"); clearErrors(); setEmail(""); setPassword(""); setName(""); };
+
+  const handleGuestSignIn = async () => {
+    clearErrors();
+    setLoading(true);
+    try { await signInAsGuest(); } catch { /* handled in context */ }
+    finally { setLoading(false); }
+  };
 
   const handleGoogleSignIn = async () => {
     clearErrors();
@@ -280,6 +287,23 @@ export default function LoginPage() {
                   <Mail size={16} className="text-purple-400" />
                   Sign in with Email
                   <ArrowRight size={14} className="ml-auto text-gray-600" />
+                </motion.button>
+
+                {/* Guest Sign In */}
+                <motion.button
+                  id="guest-signin-btn"
+                  whileHover={{ scale: 1.015 }}
+                  whileTap={{ scale: 0.975 }}
+                  onClick={handleGuestSignIn}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-sm font-medium text-purple-200 transition-all duration-200"
+                  style={{
+                    background: "rgba(139, 92, 246, 0.1)",
+                    border: "1px solid rgba(139, 92, 246, 0.2)",
+                  }}
+                >
+                  <User size={16} className="text-purple-400" />
+                  {loading ? <Spinner /> : <><span>Continue as Guest</span><ArrowRight size={14} className="ml-auto text-purple-400" /></>}
                 </motion.button>
 
                 {/* Sign up link */}

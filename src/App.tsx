@@ -13,6 +13,14 @@ import Assignments from "./pages/Assignments";
 import TodoList from "./pages/TodoList";
 import CalendarPage from "./pages/CalendarPage";
 import SettingsPage from "./pages/SettingsPage";
+import BillingPage from "./pages/BillingPage";
+import NotesPage from "./pages/NotesPage";
+import DocumentsPage from "./pages/DocumentsPage";
+import FlashcardsPage from "./pages/FlashcardsPage";
+import PomodoroPage from "./pages/PomodoroPage";
+import AttendancePage from "./pages/AttendancePage";
+import CGPAPage from "./pages/CGPAPage";
+import StudyPlannerPage from "./pages/StudyPlannerPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 import FloatingAssistant from "./components/FloatingAssistant";
@@ -62,7 +70,15 @@ function AppLayout() {
           <Route path="/assignments" element={<Assignments />} />
           <Route path="/todo" element={<TodoList />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/notes" element={<NotesPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/flashcards" element={<FlashcardsPage />} />
+          <Route path="/pomodoro" element={<PomodoroPage />} />
+          <Route path="/attendance" element={<AttendancePage />} />
+          <Route path="/cgpa" element={<CGPAPage />} />
+          <Route path="/study-planner" element={<StudyPlannerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/billing" element={<BillingPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

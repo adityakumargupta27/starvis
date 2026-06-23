@@ -1,2 +1,31 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment variables
 .env
-node_modules
+.env.local
+.env.development
+.env.production
+.env.test
+server/.env
+server/.env.local
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local IDX / agent configs
+.idx/
+.agents/
+.gemini/

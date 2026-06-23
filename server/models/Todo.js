@@ -31,6 +31,8 @@ const todoSchema = mongoose.Schema(
   }
 );
 
+todoSchema.index({ userId: 1, completed: 1 });
+
 const Todo = mongoose.model("Todo", todoSchema);
 
 export { todoSchema };

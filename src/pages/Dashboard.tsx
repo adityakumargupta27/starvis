@@ -400,6 +400,7 @@ export default function Dashboard() {
   const { profile, saveProfile } = useStudyProfile();
   const { user } = useAuth();
   const [showSetup, setShowSetup] = useState(false);
+  const isSetup = !!(profile.course || profile.year);
 
   const quote = QUOTES[new Date().getDay() % QUOTES.length];
 

@@ -16,6 +16,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<void>;
+  signInAsGuest: () => Promise<void>;
   signIn: (user: User) => void; // legacy fallback
   signOut: () => Promise<void>;
   authError: string | null;
@@ -46,14 +47,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setAuthError(null);
-      const mockGoogleProfile = {
-        name: "Google Student",
-        email: "google.student@bmsce.in",
-        avatar: "",
-        googleId: "google-oauth-id-123456"
-      };
+      let profile;
+      if (import.meta.env.VITE_FIREBASE_API_KEY) {
+        const { signInWithPopup } = await import("firebase/auth");
+        const { auth, googleProvider } = await import("@/lib/firebase");
+        const result = await signInWithPopup(auth, googleProvider);
+        if (result.user) {
+          profile = {
+            name: result.user.displayName || "Google Student",
+            email: result.user.email || "",
+            avatar: result.user.photoURL || "",
+            googleId: result.user.uid
+          };
+        } else {
+          throw new Error("No user returned from Google sign-in");
+        }
+      } else {
+        // Fallback mock profile in local dev when VITE_FIREBASE_API_KEY is not defined
+        profile = {
+          name: "Google Student",
+          email: "google.student@bmsce.in",
+          avatar: "",
+          googleId: "google-oauth-id-123456"
+        };
+      }
 
-      const data = await api.post("/auth/google", mockGoogleProfile);
+      const data = await api.post("/auth/google", profile);
       localStorage.setItem("starvis_jwt_token", data.token);
       const userObj = {
         name: data.name,
@@ -67,6 +86,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await syncLocalStorageToMongoDB();
     } catch (err: any) {
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
+        return;
+      }
       setAuthError(err.message || "Google sign-in failed");
     }
   };
@@ -110,6 +132,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await syncLocalStorageToMongoDB();
     } catch (err: any) {
       setAuthError(err.message || "Sign-up failed");
+      throw err;
+    }
+  };
+
+  const signInAsGuest = async () => {
+    try {
+      setAuthError(null);
+      const data = await api.post<{ name: string; email: string; initials: string; uid: string; token: string }>("/auth/guest", {});
+      localStorage.setItem("starvis_jwt_token", data.token);
+      const userObj = {
+        name: data.name,
+        email: data.email,
+        initials: data.initials,
+        uid: data.uid,
+      };
+      localStorage.setItem("starvis_user", JSON.stringify(userObj));
+      setUser(userObj);
+
+      await syncLocalStorageToMongoDB();
+    } catch (err: any) {
+      setAuthError(err.message || "Guest sign-in failed");
       throw err;
     }
   };
@@ -210,7 +253,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, firebaseUser: null, signInWithGoogle, signInWithEmail, signUpWithEmail, signIn, signOut, authError, clearAuthError }}
+      value={{
+        user,
+        isLoading,
+        firebaseUser: null,
+        signInWithGoogle,
+        signInWithEmail,
+        signUpWithEmail,
+        signInAsGuest,
+        signIn,
+        signOut,
+        authError,
+        clearAuthError,
+      }}
     >
       {children}
     </AuthContext.Provider>
