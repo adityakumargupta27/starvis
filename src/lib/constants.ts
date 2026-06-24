@@ -38,8 +38,6 @@ export const ROUTES = {
   flashcards: "/flashcards",
   quiz: "/quiz",
   pomodoro: "/pomodoro",
-  attendance: "/attendance",
-  cgpa: "/cgpa",
   studyPlanner: "/study-planner",
   settings: "/settings",
   billing: "/billing",

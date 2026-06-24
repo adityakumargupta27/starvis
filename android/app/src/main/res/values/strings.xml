@@ -4,4 +4,5 @@
     <string name="title_activity_main">STARVIS</string>
     <string name="package_name">com.starvis.app</string>
     <string name="custom_url_scheme">com.starvis.app</string>
+    <string name="server_client_id">813085064919-4upovatc2s90j5v9crgehbn6me2kkai3.apps.googleusercontent.com</string>
 </resources>

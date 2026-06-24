@@ -27,8 +27,6 @@ const navItems = [
   { to: "/assignments", label: "Assignments", icon: ClipboardList },
   { to: "/todo", label: "To-Do List", icon: CheckSquare },
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/attendance", label: "Attendance", icon: GraduationCap },
-  { to: "/cgpa", label: "CGPA Tracker", icon: TrendingUp },
   { to: "/study-planner", label: "AI Study Planner", icon: Sparkles },
   { to: "/billing", label: "Billing", icon: CreditCard },
   { to: "/settings", label: "Settings", icon: Settings },

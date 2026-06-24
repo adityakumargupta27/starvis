@@ -154,7 +154,7 @@ const FloatingAssistant = () => {
       } else if (lower.includes("flashcard") || lower.includes("deck")) {
         reply = "You can study with flashcards! 🗂️ Use the **Flashcards** page in the app to create/study decks. You can generate custom decks using our AI deck generator by describing any subject.";
       } else {
-        reply = `I'm here to help you study! 🌟 While our AI connection is offline, I can guide you through the STARVIS app. You can use the sidebar to manage **Todo Lists**, log **Attendance**, calculate **CGPA**, and set up **Calendar events**. Let me know what you'd like to do!`;
+        reply = `I'm here to help you study! 🌟 While our AI connection is offline, I can guide you through the STARVIS app. You can use the sidebar to manage **Todo Lists**, create **AI Notes**, study **Flashcards**, start a **Pomodoro session**, and set up **Calendar events**. Let me know what you'd like to do!`;
       }
 
       setMessages((prev) => [

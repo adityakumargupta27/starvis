@@ -18,8 +18,6 @@ import NotesPage from "./pages/NotesPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import FlashcardsPage from "./pages/FlashcardsPage";
 import PomodoroPage from "./pages/PomodoroPage";
-import AttendancePage from "./pages/AttendancePage";
-import CGPAPage from "./pages/CGPAPage";
 import StudyPlannerPage from "./pages/StudyPlannerPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
@@ -74,8 +72,6 @@ function AppLayout() {
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/flashcards" element={<FlashcardsPage />} />
           <Route path="/pomodoro" element={<PomodoroPage />} />
-          <Route path="/attendance" element={<AttendancePage />} />
-          <Route path="/cgpa" element={<CGPAPage />} />
           <Route path="/study-planner" element={<StudyPlannerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/billing" element={<BillingPage />} />
