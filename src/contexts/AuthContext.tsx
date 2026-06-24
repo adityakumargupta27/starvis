@@ -62,13 +62,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.platform !== "web";
       
       if (isNative) {
-        console.info("[Auth] Native platform detected. Bypassing Firebase popup to ensure seamless Google login during presentation.");
-        profile = {
-          name: "Demo Student",
-          email: "demo.student@starvis.edu",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-          googleId: "native-demo-google-uid-999"
-        };
+        console.info("[Auth] Native platform detected. Initializing Capacitor GoogleAuth...");
+        const { GoogleAuth } = await import("@codetrix-studio/capacitor-google-auth");
+        GoogleAuth.initialize({
+          clientId: "813085064919-4upovatc2s90j5v9crgehbn6me2kkai3.apps.googleusercontent.com",
+          scopes: ["profile", "email"],
+          grantOfflineAccess: true,
+        });
+        const gUser = await GoogleAuth.signIn();
+        if (gUser && gUser.authentication?.idToken) {
+          console.info("[Auth] Native Google sign-in successful. Authenticating with Firebase...");
+          const { GoogleAuthProvider, signInWithCredential } = await import("firebase/auth");
+          const { auth } = await import("@/lib/firebase");
+          const credential = GoogleAuthProvider.credential(gUser.authentication.idToken);
+          const result = await signInWithCredential(auth, credential);
+          if (result.user) {
+            profile = {
+              name: result.user.displayName || gUser.displayName || "Google Student",
+              email: result.user.email || gUser.email || "",
+              avatar: result.user.photoURL || gUser.imageUrl || "",
+              googleId: result.user.uid
+            };
+          } else {
+            throw new Error("No user returned from native Firebase Google sign-in");
+          }
+        } else {
+          throw new Error("Failed to retrieve ID Token from Google Auth native plugin");
+        }
       } else if (hasFirebaseConfig) {
         console.info("[Auth] Starting Google sign-in with Firebase popup...");
         const { signInWithPopup } = await import("firebase/auth");

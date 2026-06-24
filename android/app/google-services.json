@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "813085064919",
+    "project_id": "starvis-63b17",
+    "storage_bucket": "starvis-63b17.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:813085064919:android:11dff1d80dc4910099fa92",
+        "android_client_info": {
+          "package_name": "com.starvis.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "813085064919-09acc9ef27ejj0d9n3v4u58h8kovfgok.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.starvis.app",
+            "certificate_hash": "b82a96f6d666c613c41c58f9d1703e68cda022ef"
+          }
+        },
+        {
+          "client_id": "813085064919-4upovatc2s90j5v9crgehbn6me2kkai3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5Ar8zr_22OIynq6zXMaCD4temZkY6eiI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "813085064919-4upovatc2s90j5v9crgehbn6me2kkai3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

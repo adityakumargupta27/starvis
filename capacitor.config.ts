@@ -26,6 +26,11 @@ const config: CapacitorConfig = {
     preferredContentMode: "mobile",
   },
   plugins: {
+    GoogleAuth: {
+      scopes: ["profile", "email"],
+      clientId: "813085064919-4upovatc2s90j5v9crgehbn6me2kkai3.apps.googleusercontent.com",
+      forceCodeForRefreshToken: true,
+    },
     SplashScreen: {
       launchShowDuration: 2000,
       launchAutoHide: true,
