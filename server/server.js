@@ -39,6 +39,9 @@ import studyPlanRoutes from "./routes/v1/studyplan.js";
 
 const app = express();
 
+// Enable trust proxy for express-rate-limit behind Railway's proxy
+app.set("trust proxy", 1);
+
 // ── Security middleware ─────────────────────────────────────────────────────
 app.use(helmet({ crossOriginEmbedderPolicy: false }));
 app.use(mongoSanitize());
