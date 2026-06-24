@@ -32,6 +32,9 @@ const userSchema = mongoose.Schema(
     planExpiresAt: {
       type: Date,
     },
+    databaseName: {
+      type: String,
+    },
   },
   {
     timestamps: true,

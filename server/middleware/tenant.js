@@ -27,7 +27,7 @@ function safeModel(conn, name, schema) {
 
 /**
  * getTenantModels middleware
- * Resolves a per-user isolated database (starvis_user_<id>)
+ * Resolves a per-user isolated database (req.user.databaseName or fallback starvis_user_<id>)
  * and attaches typed model references to req.models.
  */
 const getTenantModels = (req, res, next) => {
@@ -36,7 +36,7 @@ const getTenantModels = (req, res, next) => {
   }
 
   try {
-    const dbName = `starvis_user_${req.user._id.toString()}`;
+    const dbName = req.user.databaseName || `starvis_user_${req.user._id.toString()}`;
     const db = mongoose.connection.useDb(dbName, { useCache: true });
 
     req.models = {

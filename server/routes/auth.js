@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import User from "../models/User.js";
 import { sendWelcomeEmail, sendLoginAlertEmail } from "../services/emailService.js";
 
@@ -21,6 +22,12 @@ const getInitials = (name) => {
     .slice(0, 2);
 };
 
+const generateDatabaseName = (name, userId) => {
+  const prefix = "starvis_user";
+  const sanitized = name.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 20);
+  return `${prefix}_${sanitized}_${userId.toString()}`;
+};
+
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
@@ -38,11 +45,16 @@ router.post("/register", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
     const initials = getInitials(name);
 
+    const userId = new mongoose.Types.ObjectId();
+    const dbName = generateDatabaseName(name, userId);
+
     const user = await User.create({
+      _id: userId,
       name,
       email,
       password: passwordHash,
       initials,
+      databaseName: dbName,
     });
 
     if (user) {
@@ -114,12 +126,17 @@ router.post("/google", async (req, res) => {
     } else {
       // Create new user
       const initials = getInitials(name || "User");
+      const userId = new mongoose.Types.ObjectId();
+      const userName = name || "User";
+      const dbName = generateDatabaseName(userName, userId);
       user = await User.create({
-        name: name || "User",
+        _id: userId,
+        name: userName,
         email,
         avatar,
         initials,
         googleId,
+        databaseName: dbName,
       });
       sendWelcomeEmail(user.email, user.name).catch((err) =>
         console.error("Welcome email failed:", err.message)
@@ -150,11 +167,16 @@ router.post("/guest", async (req, res) => {
     const email = `guest_${randomId}@starvis.app`;
     const initials = "G";
 
+    const userId = new mongoose.Types.ObjectId();
+    const dbName = generateDatabaseName(name, userId);
+
     const user = await User.create({
+      _id: userId,
       name,
       email,
       initials,
       password: await bcrypt.hash(Math.random().toString(36), 10),
+      databaseName: dbName,
     });
 
     res.status(201).json({
