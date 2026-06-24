@@ -31,8 +31,6 @@ import documentsRoutes from "./routes/v1/documents.js";
 import flashcardsRoutes from "./routes/v1/flashcards.js";
 import quizzesRoutes from "./routes/v1/quizzes.js";
 import pomodoroRoutes from "./routes/v1/pomodoro.js";
-import attendanceRoutes from "./routes/v1/attendance.js";
-import cgpaRoutes from "./routes/v1/cgpa.js";
 import billingRoutes from "./routes/v1/billing.js";
 import studyPlanRoutes from "./routes/v1/studyplan.js";
 
@@ -136,8 +134,6 @@ app.use("/api/v1/documents", documentsRoutes);
 app.use("/api/v1/flashcards", flashcardsRoutes);
 app.use("/api/v1/quizzes", quizzesRoutes);
 app.use("/api/v1/pomodoro", pomodoroRoutes);
-app.use("/api/v1/attendance", attendanceRoutes);
-app.use("/api/v1/cgpa", cgpaRoutes);
 app.use("/api/v1/billing", billingRoutes);
 app.use("/api/v1/studyplan", studyPlanRoutes);
 
