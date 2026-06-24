@@ -307,6 +307,8 @@ export default function LoginPage() {
                 </motion.button>
 
                 {/* Sign up link */}
+                <AnimatePresence>{error && <ErrorBanner msg={error} />}</AnimatePresence>
+                
                 <p className="text-center text-xs text-gray-600">
                   Don't have an account?{" "}
                   <button
