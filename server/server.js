@@ -55,14 +55,24 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost",
-  "capacitor://localhost"
+  "https://localhost",
+  "capacitor://localhost",
+  "app://localhost"
 ].filter(Boolean);
 app.use(
   cors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
-      // Allow any localhost development origin dynamically
-      if (origin.startsWith("http://localhost:") || origin === "http://localhost" || origin.startsWith("http://127.0.0.1:")) {
+      // Allow any localhost, Capacitor, or mobile app scheme dynamics
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("https://localhost:") ||
+        origin === "http://localhost" ||
+        origin === "https://localhost" ||
+        origin.startsWith("capacitor://") ||
+        origin.startsWith("app://") ||
+        origin.startsWith("http://127.0.0.1:")
+      ) {
         return cb(null, true);
       }
       if (allowedOrigins.includes(origin)) return cb(null, true);
