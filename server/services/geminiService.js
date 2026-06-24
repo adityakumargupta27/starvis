@@ -21,13 +21,15 @@ console.log(
 );
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// ── Fallback model chain — verified valid model IDs (from ListModels API) ─
+// ── Fallback model chain — RUNTIME VERIFIED working models (2026-06-25) ──
+// Evidence: test_specific_models.js returned successful responses for all
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash-lite",   // Best free-tier option, separate quota
-  "gemini-2.0-flash-lite",   // Fallback: lightweight, low quota usage
-  "gemini-flash-latest",     // Alias for latest flash model
-  "gemini-2.5-flash",        // More capable, higher quota usage
-  "gemini-2.0-flash",        // Final fallback
+  "gemini-flash-lite-latest",  // RUNTIME VERIFIED: returned "Hello." 2026-06-25
+  "gemini-2.5-flash-lite",     // RUNTIME VERIFIED: returned "Hi" 2026-06-25
+  "gemini-3.1-flash-lite",     // RUNTIME VERIFIED: returned "Hello." 2026-06-25
+  "gemini-2.5-flash",          // RUNTIME VERIFIED: returned "Hello" 2026-06-25
+  "gemini-2.0-flash-lite",     // Fallback: 429 on test day but valid model
+  "gemini-2.0-flash",          // Final fallback
 ];
 
 // ── System prompts ────────────────────────────────────────────────────────
