@@ -1,5 +1,12 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const result = dotenv.config({ path: path.resolve(__dirname, ".env") });
+console.log("[Dotenv] Loaded keys:", Object.keys(result.parsed || {}));
+if (result.error) console.error("[Dotenv] Load error:", result.error);
 
 import express from "express";
 import cors from "cors";

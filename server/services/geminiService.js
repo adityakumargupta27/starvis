@@ -1,13 +1,34 @@
 /**
- * STARVIS AI — Centralized Gemini AI Service
- * All AI calls go through this service — API key never leaves the server.
+ * geminiService.js
+ * Gemini-only AI service with a reliable model fallback chain.
  */
+
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
+const apiKey = process.env.GEMINI_API_KEY ?? "";
+console.log(
+  `[Gemini] Initializing with key: ${
+    apiKey ? apiKey.slice(0, 5) + "..." + apiKey.slice(-5) : "undefined/empty"
+  }`
+);
+const genAI = new GoogleGenerativeAI(apiKey);
 
-const MODEL = "gemini-2.0-flash";
+// ── Fallback model chain — all verified valid model IDs ───────────────────
+const FALLBACK_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+];
 
+// ── System prompts ────────────────────────────────────────────────────────
 const SYSTEM_PROMPTS = {
   chat: `You are STARVIS, an AI academic copilot for students. You help with:
 - Explaining concepts clearly and concisely
@@ -27,7 +48,7 @@ Return a valid JSON array of questions with this exact structure:
 [{
   "question": "...",
   "type": "mcq" | "short" | "long",
-  "options": ["A", "B", "C", "D"],   // only for mcq
+  "options": ["A", "B", "C", "D"],
   "answer": "correct answer",
   "explanation": "brief explanation"
 }]
@@ -50,41 +71,62 @@ Answer questions based strictly on the document content provided.
 Be precise and cite relevant sections when possible.`,
 };
 
-/**
- * Generic text generation
- */
+// ── Core: run with model fallback + retry on 503/429 ─────────────────────
+async function runWithFallbackAndRetry(fn, systemInstruction, maxRetries = 2) {
+  let lastError;
+
+  for (const modelName of FALLBACK_MODELS) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[Gemini] Trying model "${modelName}" attempt ${attempt + 1}`);
+        const model = genAI.getGenerativeModel({ model: modelName, systemInstruction });
+        return await fn(model);
+      } catch (err) {
+        lastError = err;
+        const status =
+          err.status ||
+          (err.message?.includes("503") ? 503 : null) ||
+          (err.message?.includes("429") ? 429 : null);
+
+        console.warn(`[Gemini] "${modelName}" attempt ${attempt + 1} failed: ${err.message}`);
+
+        if ((status === 503 || status === 429) && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1500 + Math.random() * 500;
+          console.log(`[Gemini] Waiting ${Math.round(delay)}ms before retry...`);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        break; // try next model
+      }
+    }
+  }
+
+  throw lastError || new Error("All Gemini models failed to respond.");
+}
+
+// ── Public API ────────────────────────────────────────────────────────────
+
 async function generateText(prompt, systemPromptKey = "chat") {
-  const model = genAI.getGenerativeModel({
-    model: MODEL,
-    systemInstruction: SYSTEM_PROMPTS[systemPromptKey] ?? SYSTEM_PROMPTS.chat,
-  });
-
-  const result = await model.generateContent(prompt);
-  return result.response.text();
+  const instruction = SYSTEM_PROMPTS[systemPromptKey] ?? SYSTEM_PROMPTS.chat;
+  return runWithFallbackAndRetry(async (model) => {
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  }, instruction);
 }
 
-/**
- * Multi-turn chat with history
- */
 async function chat(history = [], userMessage) {
-  const model = genAI.getGenerativeModel({
-    model: MODEL,
-    systemInstruction: SYSTEM_PROMPTS.chat,
-  });
-
-  const geminiHistory = history.map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }],
-  }));
-
-  const chatSession = model.startChat({ history: geminiHistory });
-  const result = await chatSession.sendMessage(userMessage);
-  return result.response.text();
+  const instruction = SYSTEM_PROMPTS.chat;
+  return runWithFallbackAndRetry(async (model) => {
+    const geminiHistory = history.map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
+    const chatSession = model.startChat({ history: geminiHistory });
+    const result = await chatSession.sendMessage(userMessage);
+    return result.response.text();
+  }, instruction);
 }
 
-/**
- * Generate structured notes from topic or content
- */
 async function generateNotes(topic, existingContent = "") {
   const prompt = existingContent
     ? `Generate comprehensive study notes for:\n\nContent:\n${existingContent}`
@@ -92,23 +134,16 @@ async function generateNotes(topic, existingContent = "") {
   return generateText(prompt, "notes");
 }
 
-/**
- * Generate quiz questions
- */
 async function generateQuiz(topic, content = "", count = 10, type = "mcq") {
   const prompt = content
     ? `Generate ${count} ${type} questions from this content:\n\n${content}\n\nReturn only the JSON array.`
     : `Generate ${count} ${type} questions on the topic: "${topic}"\n\nReturn only the JSON array.`;
 
   const raw = await generateText(prompt, "quiz");
-  // Strip markdown fences if model adds them
   const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
   return JSON.parse(cleaned);
 }
 
-/**
- * Generate flashcards
- */
 async function generateFlashcards(topic, content = "") {
   const prompt = content
     ? `Generate flashcards from this content:\n\n${content}\n\nReturn only the JSON array.`
@@ -119,9 +154,6 @@ async function generateFlashcards(topic, content = "") {
   return JSON.parse(cleaned);
 }
 
-/**
- * Generate AI study plan
- */
 async function generateStudyPlan({ subjects, examDate, hoursPerDay, currentLevel }) {
   const prompt = `Create a detailed study plan with these parameters:
 - Subjects/Topics: ${subjects.join(", ")}
@@ -132,24 +164,18 @@ Make it realistic, day-by-day with specific goals.`;
   return generateText(prompt, "studyPlan");
 }
 
-/**
- * Chat with document content
- */
 async function chatWithDocument(documentText, question, history = []) {
-  const model = genAI.getGenerativeModel({
-    model: MODEL,
-    systemInstruction: SYSTEM_PROMPTS.documentChat,
-  });
-
-  const geminiHistory = history.map((m) => ({
-    role: m.role === "user" ? "user" : "model",
-    parts: [{ text: m.content }],
-  }));
-
-  const chatSession = model.startChat({ history: geminiHistory });
-  const prompt = `Document Content:\n${documentText.slice(0, 8000)}\n\nQuestion: ${question}`;
-  const result = await chatSession.sendMessage(prompt);
-  return result.response.text();
+  const instruction = SYSTEM_PROMPTS.documentChat;
+  return runWithFallbackAndRetry(async (model) => {
+    const geminiHistory = history.map((m) => ({
+      role: m.role === "user" ? "user" : "model",
+      parts: [{ text: m.content }],
+    }));
+    const chatSession = model.startChat({ history: geminiHistory });
+    const prompt = `Document Content:\n${documentText.slice(0, 8000)}\n\nQuestion: ${question}`;
+    const result = await chatSession.sendMessage(prompt);
+    return result.response.text();
+  }, instruction);
 }
 
 export default {

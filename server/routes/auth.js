@@ -23,8 +23,8 @@ const getInitials = (name) => {
 };
 
 const generateDatabaseName = (name, userId) => {
-  const prefix = "starvis_user";
-  const sanitized = name.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 20);
+  const prefix = "u";
+  const sanitized = name.toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 10);
   return `${prefix}_${sanitized}_${userId.toString()}`;
 };
 
