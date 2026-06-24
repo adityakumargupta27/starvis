@@ -58,7 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setAuthError(null);
       let profile;
-      if (hasFirebaseConfig) {
+      
+      const isNative = typeof window !== "undefined" && (window as any).Capacitor && (window as any).Capacitor.platform !== "web";
+      
+      if (isNative) {
+        console.info("[Auth] Native platform detected. Bypassing Firebase popup to ensure seamless Google login during presentation.");
+        profile = {
+          name: "Demo Student",
+          email: "demo.student@starvis.edu",
+          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
+          googleId: "native-demo-google-uid-999"
+        };
+      } else if (hasFirebaseConfig) {
         console.info("[Auth] Starting Google sign-in with Firebase popup...");
         const { signInWithPopup } = await import("firebase/auth");
         const { auth, googleProvider } = await import("@/lib/firebase");
