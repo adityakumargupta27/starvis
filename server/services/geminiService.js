@@ -21,13 +21,13 @@ console.log(
 );
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// ── Fallback model chain — all verified valid model IDs ───────────────────
+// ── Fallback model chain — verified valid model IDs (from ListModels API) ─
 const FALLBACK_MODELS = [
-  "gemini-2.5-flash-lite",
-  "gemini-3.1-flash-lite",
-  "gemini-flash-lite-latest",
-  "gemini-2.5-flash",
-  "gemini-2.0-flash",
+  "gemini-2.5-flash-lite",   // Best free-tier option, separate quota
+  "gemini-2.0-flash-lite",   // Fallback: lightweight, low quota usage
+  "gemini-flash-latest",     // Alias for latest flash model
+  "gemini-2.5-flash",        // More capable, higher quota usage
+  "gemini-2.0-flash",        // Final fallback
 ];
 
 // ── System prompts ────────────────────────────────────────────────────────
