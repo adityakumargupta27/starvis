@@ -71,7 +71,17 @@ export default function StudyPlannerPage() {
   };
 
   const handleGenerate = async () => {
-    if (!subjects.length || !examDate) {
+    let activeSubjects = [...subjects];
+    const currentInput = subjectInput.trim();
+    if (currentInput) {
+      if (!activeSubjects.includes(currentInput)) {
+        activeSubjects.push(currentInput);
+      }
+      setSubjects(activeSubjects);
+      setSubjectInput("");
+    }
+
+    if (!activeSubjects.length || !examDate) {
       toast({
         title: "Missing Information",
         description: "Please specify at least one subject and the exam date.",
@@ -83,14 +93,14 @@ export default function StudyPlannerPage() {
     setGenerating(true);
     try {
       const { plan } = await api.post<{ plan: string }>("/ai/study-plan", {
-        subjects,
+        subjects: activeSubjects,
         examDate,
         hoursPerDay,
         currentLevel,
       });
 
       const newPlan = await api.post<StudyGoal>("/studyplan", {
-        subjects,
+        subjects: activeSubjects,
         examDate,
         hoursPerDay,
         currentLevel,
@@ -108,7 +118,7 @@ export default function StudyPlannerPage() {
       });
     } catch (err: any) {
       console.warn("AI Study Plan generation failed, using mock plan fallback for presentation safety", err);
-      const mockPlanText = `# Study Plan: ${subjects.join(", ")}
+      const mockPlanText = `# Study Plan: ${activeSubjects.join(", ")}
       
 ## Roadmap to Exam (${new Date(examDate).toLocaleDateString()})
 - **Proficiency Level**: ${currentLevel}
@@ -117,7 +127,7 @@ export default function StudyPlannerPage() {
 ## Daily Study Schedule
 
 ### Phase 1: Foundations & Core Concepts
-- Spend ${hoursPerDay} hours reviewing foundational topics for ${subjects[0] || "General subject"}.
+- Spend ${hoursPerDay} hours reviewing foundational topics for ${activeSubjects[0] || "General subject"}.
 - Use flashcards to recall key terminology and formulas.
 
 ### Phase 2: Question Practice & Application
@@ -132,7 +142,7 @@ export default function StudyPlannerPage() {
 
       try {
         const newPlan = await api.post<StudyGoal>("/studyplan", {
-          subjects,
+          subjects: activeSubjects,
           examDate,
           hoursPerDay,
           currentLevel,
@@ -152,7 +162,7 @@ export default function StudyPlannerPage() {
         // Ultimate fallback: add to local state if database fails too
         const mockPlan: StudyGoal = {
           _id: "mock_" + Date.now(),
-          subjects,
+          subjects: activeSubjects,
           examDate,
           hoursPerDay,
           currentLevel,
@@ -361,7 +371,7 @@ export default function StudyPlannerPage() {
 
                 <Button
                   onClick={handleGenerate}
-                  disabled={generating || !subjects.length || !examDate}
+                  disabled={generating || (!subjects.length && !subjectInput.trim()) || !examDate}
                   className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold h-10 rounded-xl text-xs gap-1.5 shadow-md shadow-purple-950/20"
                 >
                   {generating ? (
