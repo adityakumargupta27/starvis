@@ -166,6 +166,15 @@ export default function DocumentsPage() {
       if (!res.ok) throw new Error((await res.json()).message);
       const doc = await res.json() as Document;
       setDocs((p) => [doc, ...p]);
+      if (doc._id) {
+        api.post<{ summary: string }>("/ai/document-summary", { documentId: doc._id })
+          .then(({ summary }) => {
+            setDocs((p) => p.map((item) => item._id === doc._id ? { ...item, summary } : item));
+          })
+          .catch((err) => {
+            console.error("Document summary failed:", err);
+          });
+      }
     } catch (err: any) {
       alert(err.message || "Upload failed");
     } finally { setUploading(false); }

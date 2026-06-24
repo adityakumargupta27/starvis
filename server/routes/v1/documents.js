@@ -1,13 +1,11 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 const pdfParse = require("pdf-parse");
 import { protect } from "../../middleware/auth.js";
 import { getTenantModels } from "../../middleware/tenant.js";
-import gemini from "../../services/geminiService.js";
 
 const router = express.Router();
 router.use(protect);
@@ -54,24 +52,13 @@ router.post("/upload", upload.single("file"), async (req, res) => {
       extractedText = req.file.buffer.toString("utf-8");
     }
 
-    // Generate a quick AI summary
-    let summary = "";
-    if (extractedText.length > 100) {
-      try {
-        summary = await gemini.generateText(
-          `Summarize this document in 3-4 sentences:\n\n${extractedText.slice(0, 4000)}`,
-          "notes"
-        );
-      } catch (_) { /* non-blocking */ }
-    }
-
     const doc = await Document.create({
       userId: req.user._id,
       originalName: req.file.originalname,
       fileType: ext,
       fileSize: req.file.size,
       extractedText,
-      summary,
+      summary: "",
     });
 
     res.status(201).json({

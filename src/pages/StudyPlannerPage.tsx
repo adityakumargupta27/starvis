@@ -82,11 +82,19 @@ export default function StudyPlannerPage() {
 
     setGenerating(true);
     try {
+      const { plan } = await api.post<{ plan: string }>("/ai/study-plan", {
+        subjects,
+        examDate,
+        hoursPerDay,
+        currentLevel,
+      });
+
       const newPlan = await api.post<StudyGoal>("/studyplan", {
         subjects,
         examDate,
         hoursPerDay,
         currentLevel,
+        planText: plan,
       });
       setPlans((prev) => [newPlan, ...prev]);
       setSelectedPlan(newPlan);

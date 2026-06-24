@@ -73,13 +73,15 @@ const item = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } };
 /* ─── Onboarding / Profile Setup Modal ───────────────────────────────── */
 interface OnboardingModalProps {
   initial: StudyProfile;
-  onSave: (data: Partial<StudyProfile>) => void;
+  onSave: (data: Partial<StudyProfile>) => Promise<StudyProfile>;
   onClose: () => void;
   isFirstTime: boolean;
 }
 
 function OnboardingModal({ initial, onSave, onClose, isFirstTime }: OnboardingModalProps) {
   const [step, setStep] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [form, setForm] = useState({
     course: initial.course || "",
     year: initial.year || "",
@@ -124,9 +126,17 @@ function OnboardingModal({ initial, onSave, onClose, isFirstTime }: OnboardingMo
   const updateWeekly = (i: number, key: "study" | "procrastination", val: number) =>
     setF("weeklyHours", form.weeklyHours.map((w, idx) => idx === i ? { ...w, [key]: val } : w));
 
-  const handleSave = () => {
-    onSave(form);
-    onClose();
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await onSave(form);
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save dashboard data.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputCls = "w-full bg-white/5 border border-purple-400/30 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 outline-none focus:border-purple-400/60";
@@ -362,6 +372,11 @@ function OnboardingModal({ initial, onSave, onClose, isFirstTime }: OnboardingMo
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-white/10">
+          {saveError && (
+            <p className="mr-3 text-xs text-red-300">
+              {saveError}
+            </p>
+          )}
           <div className="flex gap-2">
             {step > 0 && (
               <button
@@ -383,9 +398,10 @@ function OnboardingModal({ initial, onSave, onClose, isFirstTime }: OnboardingMo
             ) : (
               <button
                 onClick={handleSave}
+                disabled={saving}
                 className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white rounded-lg bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 transition-colors"
               >
-                <Check size={14} /> Save & Apply
+                <Check size={14} /> {saving ? "Saving..." : "Save & Apply"}
               </button>
             )}
           </div>

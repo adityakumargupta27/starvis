@@ -110,4 +110,32 @@ router.post("/document-chat", async (req, res) => {
   }
 });
 
+// Document summary generation stays in the centralized AI route.
+router.post("/document-summary", async (req, res) => {
+  try {
+    const { documentId } = req.body;
+    if (!documentId) {
+      return res.status(400).json({ message: "documentId is required" });
+    }
+
+    const { Document } = req.models;
+    const doc = await Document.findOne({ _id: documentId, userId: req.user._id, isDeleted: false });
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+    if (!doc.extractedText?.trim()) return res.status(400).json({ message: "Document has no extracted text" });
+
+    const summary = await gemini.generateText(
+      `Summarize this document in 3-4 sentences for a student:\n\n${doc.extractedText.slice(0, 4000)}`,
+      "notes"
+    );
+
+    doc.summary = summary;
+    await doc.save();
+
+    res.json({ summary });
+  } catch (error) {
+    console.error("Doc summary error:", error.message);
+    res.status(500).json({ message: "Failed to summarize document" });
+  }
+});
+
 export default router;

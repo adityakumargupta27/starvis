@@ -75,19 +75,23 @@ export function useStudyProfile() {
   }, [user]);
 
   const saveProfile = async (updates: Partial<StudyProfile>) => {
-    setProfile((prev) => {
-      const next = { ...prev, ...updates };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+    const optimisticProfile = { ...profile, ...updates };
+    setProfile(optimisticProfile);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(optimisticProfile));
 
     if (user) {
       try {
-        await api.put("/profile", updates);
+        const saved = await api.put<StudyProfile>("/profile", updates);
+        setProfile((prev) => ({ ...prev, ...saved }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        return saved;
       } catch (err) {
         console.error("Failed to save study profile to server", err);
+        throw err;
       }
     }
+
+    return optimisticProfile;
   };
 
   const resetProfile = async () => {

@@ -25,6 +25,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const hasFirebaseConfig = Boolean(
+  import.meta.env.VITE_FIREBASE_API_KEY &&
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN &&
+  import.meta.env.VITE_FIREBASE_PROJECT_ID &&
+  import.meta.env.VITE_FIREBASE_APP_ID
+);
+
+// Diagnostic: log Firebase config status on load
+console.info("[Auth] hasFirebaseConfig =", hasFirebaseConfig);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,11 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setAuthError(null);
       let profile;
-      if (import.meta.env.VITE_FIREBASE_API_KEY) {
+      if (hasFirebaseConfig) {
+        console.info("[Auth] Starting Google sign-in with Firebase popup...");
         const { signInWithPopup } = await import("firebase/auth");
         const { auth, googleProvider } = await import("@/lib/firebase");
         const result = await signInWithPopup(auth, googleProvider);
         if (result.user) {
+          console.info("[Auth] Google sign-in successful for:", result.user.email);
           profile = {
             name: result.user.displayName || "Google Student",
             email: result.user.email || "",
@@ -63,6 +75,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("No user returned from Google sign-in");
         }
       } else {
+        console.warn("[Auth] hasFirebaseConfig = false — Firebase env vars missing");
+        if (import.meta.env.PROD) {
+          throw new Error("Google sign-in is not configured. Add Firebase environment variables in Vercel.");
+        }
+
         // Fallback mock profile in local dev when VITE_FIREBASE_API_KEY is not defined
         profile = {
           name: "Google Student",
@@ -86,10 +103,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await syncLocalStorageToMongoDB();
     } catch (err: any) {
+      console.error("[Auth] Google sign-in error:", err.code || "N/A", err.message);
+
+      // Silently ignore user-cancelled popups
       if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") {
         return;
       }
-      setAuthError(err.message || "Google sign-in failed");
+
+      // Map Firebase error codes to human-readable messages
+      const errorMap: Record<string, string> = {
+        "auth/operation-not-allowed": "Google sign-in is not enabled. Please enable it in Firebase Console → Authentication → Sign-in method.",
+        "auth/unauthorized-domain": "This domain is not authorized for Google sign-in. Add it in Firebase Console → Authentication → Settings → Authorized domains.",
+        "auth/popup-blocked": "The sign-in popup was blocked by your browser. Please allow popups for this site and try again.",
+        "auth/network-request-failed": "Network error. Please check your internet connection and try again.",
+        "auth/internal-error": "Firebase internal error. Check that Google Sign-In is enabled in Firebase Console.",
+        "auth/invalid-api-key": "Invalid Firebase API key. Check your VITE_FIREBASE_API_KEY in .env.local.",
+      };
+
+      const friendlyMsg = err.code && errorMap[err.code]
+        ? errorMap[err.code]
+        : err.message || "Google sign-in failed. Check the browser console for details.";
+
+      setAuthError(friendlyMsg);
     }
   };
 
