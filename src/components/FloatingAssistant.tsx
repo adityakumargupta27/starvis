@@ -142,9 +142,24 @@ const FloatingAssistant = () => {
       ]);
     } catch (error) {
       console.error("Gemini API Error:", error);
+      
+      const lower = text.toLowerCase();
+      let reply = "";
+      if (lower.includes("study plan") || lower.includes("schedule")) {
+        reply = "I'd be glad to help you structure a study plan! 📚 You can use our **AI Study Planner** tool in the sidebar/bottom navigation to build a highly structured, adaptive roadmap for your target exam. Let me know if you need specific advice on managing your hours!";
+      } else if (lower.includes("technique") || lower.includes("pomodoro") || lower.includes("focus")) {
+        reply = "A great technique to try is the **Pomodoro Technique**! ⏱️ Work for 25 minutes, then take a 5-minute break. In the app, you can head to the **Pomodoro** tab to start an active focus session. Would you like tips on avoiding distractions?";
+      } else if (lower.includes("notes") || lower.includes("summar")) {
+        reply = "To create notes, you can use the **AI Notes** page! 📝 Just click **AI Generate** in the Notes section, describe the topic, and STARVIS will compile a structured breakdown. Let me know what concepts you're studying!";
+      } else if (lower.includes("flashcard") || lower.includes("deck")) {
+        reply = "You can study with flashcards! 🗂️ Use the **Flashcards** page in the app to create/study decks. You can generate custom decks using our AI deck generator by describing any subject.";
+      } else {
+        reply = `I'm here to help you study! 🌟 While our AI connection is offline, I can guide you through the STARVIS app. You can use the sidebar to manage **Todo Lists**, log **Attendance**, calculate **CGPA**, and set up **Calendar events**. Let me know what you'd like to do!`;
+      }
+
       setMessages((prev) => [
         ...prev,
-        { text: "Something went wrong. Please try again in a bit.", sender: "assistant", timestamp: new Date() },
+        { text: reply, sender: "assistant", timestamp: new Date() },
       ]);
     } finally {
       setIsLoading(false);

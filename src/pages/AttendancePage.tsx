@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -75,6 +76,7 @@ function SubjectCard({ data, onMark, onDelete, onSelect }: { data: AttendanceSum
 }
 
 export default function AttendancePage() {
+  const { toast } = useToast();
   const { user } = useAuth();
   const [subjects, setSubjects] = useState<AttendanceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +101,13 @@ export default function AttendancePage() {
       await api.post("/attendance", { subject: newSubject.trim(), targetPercentage: newTarget });
       setNewSubject(""); setShowAdd(false);
       fetchSubjects();
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) {
+      toast({
+        title: "Failed to add subject",
+        description: err.message || "Could not add the subject.",
+        variant: "destructive",
+      });
+    }
     finally { setAdding(false); }
   };
 

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/api";
 
 const GRADE_POINTS: Record<string, number> = {
@@ -35,6 +36,7 @@ function cgpaLabel(cgpa: number) {
 }
 
 export default function CGPAPage() {
+  const { toast } = useToast();
   const [semesters, setSemesters] = useState<Semester[]>([emptySemester(1)]);
   const [result, setResult] = useState<{ cgpa: number; totalCredits: number } | null>(null);
   const [prediction, setPrediction] = useState<{ requiredGPA: number; achievable: boolean; message: string } | null>(null);
@@ -69,7 +71,13 @@ export default function CGPAPage() {
     try {
       const data = await api.post<{ cgpa: number; totalCredits: number }>("/cgpa/calculate", { semesters });
       setResult(data);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) {
+      toast({
+        title: "Calculation failed",
+        description: err.message || "Failed to calculate CGPA.",
+        variant: "destructive",
+      });
+    }
     finally { setCalculating(false); }
   };
 
@@ -82,7 +90,13 @@ export default function CGPAPage() {
         targetCGPA: parseFloat(targetCGPA), remainingCredits: parseFloat(remainingCredits),
       });
       setPrediction(data);
-    } catch (err: any) { alert(err.message); }
+    } catch (err: any) {
+      toast({
+        title: "Prediction failed",
+        description: err.message || "Failed to predict CGPA requirement.",
+        variant: "destructive",
+      });
+    }
     finally { setPredicting(false); }
   };
 
