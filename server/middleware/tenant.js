@@ -13,7 +13,6 @@ import { documentSchema } from "../models/Document.js";
 import { flashcardDeckSchema, flashcardSchema } from "../models/Flashcard.js";
 import { quizSchema } from "../models/Quiz.js";
 import { pomodoroSessionSchema } from "../models/PomodoroSession.js";
-import { attendanceSchema } from "../models/Attendance.js";
 import { studyGoalSchema } from "../models/StudyGoal.js";
 
 
@@ -53,7 +52,6 @@ const getTenantModels = (req, res, next) => {
       Flashcard: safeModel(db, "Flashcard", flashcardSchema),
       Quiz: safeModel(db, "Quiz", quizSchema),
       PomodoroSession: safeModel(db, "PomodoroSession", pomodoroSessionSchema),
-      Attendance: safeModel(db, "Attendance", attendanceSchema),
       StudyGoal: safeModel(db, "StudyGoal", studyGoalSchema),
     };
 
