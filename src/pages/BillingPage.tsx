@@ -154,9 +154,6 @@ export default function BillingPage() {
                         : "Permanent lifetime demo allocation"}
                     </CardDescription>
                   </div>
-                  <Badge className="bg-purple-600 text-white uppercase text-xs w-fit py-1 px-3 self-start sm:self-center">
-                    Mock Billing Active
-                  </Badge>
                 </div>
               </CardHeader>
               
@@ -385,9 +382,9 @@ export default function BillingPage() {
           transition={{ delay: 0.3 }}
           className="flex items-center gap-3 p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 max-w-lg mx-auto"
         >
-          <AlertCircle size={18} className="text-purple-300 flex-shrink-0" />
+          <ShieldCheck size={18} className="text-purple-300 flex-shrink-0" />
           <p className="text-xs text-purple-200 leading-normal">
-            <strong>Mock Gateway Sandbox Enabled:</strong> Upgrades and downgrades occur instantly without actual charge. Razorpay and Stripe endpoints are integration-ready for production activation.
+            <strong>Secure Transactions & Instant Upgrades:</strong> All billing updates are processed securely. Subscription tiers and quotas are updated instantly upon plan selection.
           </p>
         </motion.div>
 
